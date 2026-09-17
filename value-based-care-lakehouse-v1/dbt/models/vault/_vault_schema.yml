@@ -1,0 +1,619 @@
+version: 2
+
+models:
+  # ---- Hubs ----
+  - name: hub_member
+    description: Conformed Member hub, sourced from DE-SynPUF beneficiaries and Synthea patients.
+    columns:
+      - name: member_hk
+        tests: [unique, not_null]
+      - name: member_bk
+        tests: [unique, not_null]
+
+  - name: hub_provider
+    description: Individual provider hub, keyed on NPI.
+    columns:
+      - name: provider_hk
+        tests: [unique, not_null]
+      - name: provider_bk
+        tests: [unique, not_null]
+
+  - name: hub_facility
+    description: Organization/facility hub, keyed on organizational NPI.
+    columns:
+      - name: facility_hk
+        tests: [unique, not_null]
+      - name: facility_bk
+        tests: [unique, not_null]
+
+  - name: hub_claim_line
+    description: Claim line hub, keyed on DE-SynPUF claim ID. Inpatient claims only today.
+    columns:
+      - name: claim_line_hk
+        tests: [unique, not_null]
+      - name: claim_line_bk
+        tests: [unique, not_null]
+
+  - name: hub_diagnosis
+    description: Diagnosis code hub, conformed across ICD-9 (DE-SynPUF) and SNOMED (Synthea).
+    columns:
+      - name: diagnosis_hk
+        tests: [unique, not_null]
+      - name: diagnosis_bk
+        tests: [unique, not_null]
+
+  # ---- Links ----
+  - name: lnk_claim_provider_member
+    description: Links a claim line to its billing provider and the member.
+    columns:
+      - name: claim_provider_member_hk
+        tests: [unique, not_null]
+      - name: claim_line_hk
+        tests:
+          - not_null
+          - relationships:
+              to: ref('hub_claim_line')
+              field: claim_line_hk
+      - name: provider_hk
+        tests:
+          - not_null
+          - relationships:
+              to: ref('hub_provider')
+              field: provider_hk
+      - name: member_hk
+        tests:
+          - not_null
+          - relationships:
+              to: ref('hub_member')
+              field: member_hk
+
+  - name: lnk_claim_diagnosis
+    description: Bridge linking each claim line to every diagnosis recorded on it.
+    columns:
+      - name: claim_diagnosis_hk
+        tests: [unique, not_null]
+      - name: claim_line_hk
+        tests:
+          - not_null
+          - relationships:
+              to: ref('hub_claim_line')
+              field: claim_line_hk
+      - name: diagnosis_hk
+        tests:
+          - not_null
+          - relationships:
+              to: ref('hub_diagnosis')
+              field: diagnosis_hk
+
+  # ---- Satellites ----
+  - name: sat_member_demographics
+    description: Member demographic attributes tracked over time.
+    columns:
+      - name: member_hk
+        tests:
+          - not_null
+          - relationships:
+              to: ref('hub_member')
+              field: member_hk
+
+  - name: sat_provider_details
+    description: Provider descriptive attributes tracked over time.
+    columns:
+      - name: provider_hk
+        tests:
+          - not_null
+          - relationships:
+              to: ref('hub_provider')
+              field: provider_hk
+
+  - name: sat_claim_details
+    description: Claim-level descriptive/financial attributes tracked over time.
+    columns:
+      - name: claim_line_hk
+        tests:
+          - not_null
+          - relationships:
+              to: ref('hub_claim_line')
+              field: claim_line_hk
+
+  # ==================== PAYMENT INTEGRITY DOMAIN ====================
+
+  # ---- Hubs ----
+  - name: hub_procedure
+    description: Procedure code hub. Sourced from DE-SynPUF ICD-9 procedure codes (standing in for HCPCS Level II - see ingestion/payment_integrity/README.md).
+    columns:
+      - name: procedure_hk
+        tests: [unique, not_null]
+      - name: procedure_bk
+        tests: [unique, not_null]
+
+  - name: hub_drg
+    description: DRG code hub. Sourced from real DE-SynPUF CLM_DRG_CD.
+    columns:
+      - name: drg_hk
+        tests: [unique, not_null]
+      - name: drg_bk
+        tests: [unique, not_null]
+
+  - name: hub_contract
+    description: VBC contract hub. SYNTHETIC - see ingestion/payment_integrity/README.md.
+    columns:
+      - name: contract_hk
+        tests: [unique, not_null]
+      - name: contract_bk
+        tests: [unique, not_null]
+
+  - name: hub_authorization
+    description: Prior authorization hub. SYNTHETIC.
+    columns:
+      - name: authorization_hk
+        tests: [unique, not_null]
+      - name: authorization_bk
+        tests: [unique, not_null]
+
+  - name: hub_appeal
+    description: Appeal case hub. SYNTHETIC.
+    columns:
+      - name: appeal_hk
+        tests: [unique, not_null]
+      - name: appeal_bk
+        tests: [unique, not_null]
+
+  # ---- Links ----
+  - name: lnk_claim_procedure
+    description: Links a claim line to every procedure code recorded on it.
+    columns:
+      - name: claim_procedure_hk
+        tests: [unique, not_null]
+      - name: claim_line_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_claim_line'), field: claim_line_hk}
+      - name: procedure_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_procedure'), field: procedure_hk}
+
+  - name: lnk_claim_drg
+    description: Links a claim line to its DRG assignment.
+    columns:
+      - name: claim_drg_hk
+        tests: [unique, not_null]
+      - name: claim_line_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_claim_line'), field: claim_line_hk}
+      - name: drg_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_drg'), field: drg_hk}
+
+  - name: lnk_provider_contract
+    description: Links a provider to the VBC contract(s) they participate in. SYNTHETIC.
+    columns:
+      - name: provider_contract_hk
+        tests: [unique, not_null]
+      - name: provider_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_provider'), field: provider_hk}
+      - name: contract_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_contract'), field: contract_hk}
+
+  - name: lnk_claim_authorization
+    description: Links a claim to its prior authorization. SYNTHETIC.
+    columns:
+      - name: claim_authorization_hk
+        tests: [unique, not_null]
+      - name: claim_line_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_claim_line'), field: claim_line_hk}
+      - name: authorization_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_authorization'), field: authorization_hk}
+
+  - name: lnk_claim_appeal
+    description: Links a claim to its appeal case. SYNTHETIC.
+    columns:
+      - name: claim_appeal_hk
+        tests: [unique, not_null]
+      - name: claim_line_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_claim_line'), field: claim_line_hk}
+      - name: appeal_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_appeal'), field: appeal_hk}
+
+  # ---- Satellites ----
+  - name: sat_procedure_details
+    description: Procedure descriptive attributes over time (minimal payload - see ingestion/payment_integrity/README.md).
+    columns:
+      - name: procedure_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_procedure'), field: procedure_hk}
+
+  - name: sat_drg_details
+    description: DRG descriptive attributes over time (minimal payload - see ingestion/payment_integrity/README.md).
+    columns:
+      - name: drg_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_drg'), field: drg_hk}
+
+  - name: sat_contract_details
+    description: VBC contract descriptive attributes over time. SYNTHETIC.
+    columns:
+      - name: contract_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_contract'), field: contract_hk}
+
+  - name: sat_authorization_details
+    description: Prior authorization status over time. SYNTHETIC.
+    columns:
+      - name: authorization_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_authorization'), field: authorization_hk}
+
+  - name: sat_appeal_details
+    description: Appeal case status over time. SYNTHETIC.
+    columns:
+      - name: appeal_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_appeal'), field: appeal_hk}
+
+  # ---- Transactional Links ----
+  - name: tlnk_claim_payment_txn
+    description: Claim payment transaction facts. SYNTHETIC.
+    columns:
+      - name: payment_txn_hk
+        tests: [unique, not_null]
+      - name: claim_line_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_claim_line'), field: claim_line_hk}
+
+  - name: tlnk_claim_adjustment_txn
+    description: Claim adjustment transaction facts. SYNTHETIC.
+    columns:
+      - name: adjustment_txn_hk
+        tests: [unique, not_null]
+      - name: claim_line_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_claim_line'), field: claim_line_hk}
+
+  - name: tlnk_cob_recovery_txn
+    description: Coordination-of-benefits recovery transaction facts. SYNTHETIC.
+    columns:
+      - name: cob_recovery_txn_hk
+        tests: [unique, not_null]
+      - name: claim_line_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_claim_line'), field: claim_line_hk}
+
+  # ==================== RISK ADJUSTMENT DOMAIN ====================
+
+  # ---- Hubs ----
+  - name: hub_hcc_category
+    description: CMS-HCC category hub. Real category codes/descriptions (representative subset of CMS-HCC V28) - see ingestion/risk_adjustment/README.md.
+    columns:
+      - name: hcc_hk
+        tests: [unique, not_null]
+      - name: hcc_bk
+        tests: [unique, not_null]
+
+  - name: hub_risk_model
+    description: CMS-HCC model version hub (V24, V28) - real, CMS-published model versions.
+    columns:
+      - name: risk_model_hk
+        tests: [unique, not_null]
+      - name: risk_model_bk
+        tests: [unique, not_null]
+
+  # ---- Links ----
+  - name: lnk_member_hcc
+    description: Links a member to their assigned HCC categories. SYNTHETIC assignment.
+    columns:
+      - name: member_hcc_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_member'), field: member_hk}
+      - name: hcc_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_hcc_category'), field: hcc_hk}
+
+  - name: lnk_diagnosis_hcc_crosswalk
+    description: Links a diagnosis code to its HCC category under a given risk model version. Illustrative sample, not the full CMS crosswalk.
+    columns:
+      - name: diagnosis_hcc_crosswalk_hk
+        tests: [unique, not_null]
+      - name: diagnosis_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_diagnosis'), field: diagnosis_hk}
+      - name: hcc_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_hcc_category'), field: hcc_hk}
+      - name: risk_model_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_risk_model'), field: risk_model_hk}
+
+  # ---- Transactional Links ----
+  - name: tlnk_member_risk_score_txn
+    description: Member RAF score facts by model year. SYNTHETIC values.
+    columns:
+      - name: member_risk_score_txn_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_member'), field: member_hk}
+      - name: risk_model_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_risk_model'), field: risk_model_hk}
+
+  # ---- Satellites ----
+  - name: sat_hcc_category_details
+    description: HCC category descriptive attributes over time.
+    columns:
+      - name: hcc_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_hcc_category'), field: hcc_hk}
+
+  - name: sat_risk_model_details
+    description: Risk model descriptive attributes over time.
+    columns:
+      - name: risk_model_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_risk_model'), field: risk_model_hk}
+
+  - name: sat_member_hcc_status
+    description: Member-HCC assignment active status over time. SYNTHETIC (currently always active - see stg_member_hcc_sat_hk.sql).
+    columns:
+      - name: member_hcc_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('lnk_member_hcc'), field: member_hcc_hk}
+
+  # ==================== CLINICAL QUALITY DOMAIN ====================
+
+  # ---- Hubs ----
+  - name: hub_encounter
+    description: Clinical encounter hub. Real Synthea encounter data.
+    columns:
+      - name: encounter_hk
+        tests: [unique, not_null]
+      - name: encounter_bk
+        tests: [unique, not_null]
+
+  - name: hub_measure
+    description: CMS Star Ratings quality measure hub. Real measure codes (BCS-E, CBP, COL-E, D09, D10) - see ingestion/clinical_quality/README.md.
+    columns:
+      - name: measure_hk
+        tests: [unique, not_null]
+      - name: measure_bk
+        tests: [unique, not_null]
+
+  # ---- Links ----
+  - name: lnk_member_encounter
+    description: Links a member to each encounter they had. Real Synthea data.
+    columns:
+      - name: member_encounter_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_member'), field: member_hk}
+      - name: encounter_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_encounter'), field: encounter_hk}
+
+  - name: lnk_encounter_provider
+    description: Links an encounter to its attending provider. Real Synthea data.
+    columns:
+      - name: encounter_provider_hk
+        tests: [unique, not_null]
+      - name: encounter_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_encounter'), field: encounter_hk}
+      - name: provider_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_provider'), field: provider_hk}
+
+  - name: lnk_encounter_facility
+    description: Links an encounter to the facility it occurred at. Real Synthea data.
+    columns:
+      - name: encounter_facility_hk
+        tests: [unique, not_null]
+      - name: encounter_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_encounter'), field: encounter_hk}
+      - name: facility_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_facility'), field: facility_hk}
+
+  - name: lnk_encounter_diagnosis
+    description: Links an encounter to each diagnosis recorded on it. Real Synthea data (SNOMED CT codes).
+    columns:
+      - name: encounter_diagnosis_hk
+        tests: [unique, not_null]
+      - name: encounter_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_encounter'), field: encounter_hk}
+      - name: diagnosis_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_diagnosis'), field: diagnosis_hk}
+
+  - name: lnk_member_measure
+    description: Links a member to the quality measures they're eligible for. SYNTHETIC.
+    columns:
+      - name: member_measure_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_member'), field: member_hk}
+      - name: measure_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_measure'), field: measure_hk}
+
+  # ---- Transactional Links ----
+  - name: tlnk_member_measure_eval_txn
+    description: Member quality measure evaluation facts. SYNTHETIC results.
+    columns:
+      - name: member_measure_eval_txn_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_member'), field: member_hk}
+      - name: measure_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_measure'), field: measure_hk}
+
+  # ---- Satellites ----
+  - name: sat_encounter_details
+    description: Encounter descriptive attributes over time. Real Synthea data.
+    columns:
+      - name: encounter_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_encounter'), field: encounter_hk}
+
+  - name: sat_measure_definition
+    description: Quality measure descriptive attributes over time. Real measure names; illustrative weights.
+    columns:
+      - name: measure_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_measure'), field: measure_hk}
+
+  # ==================== PHARMACY DOMAIN ====================
+
+  # ---- Hubs ----
+  - name: hub_drug
+    description: Drug hub, keyed on the real NDC. Real FDA NDC Directory data.
+    columns:
+      - name: drug_hk
+        tests: [unique, not_null]
+      - name: drug_bk
+        tests: [unique, not_null]
+
+  - name: hub_pharmacy
+    description: Pharmacy hub, keyed on real pharmacy NPI. Filtered from real NPPES data by NUCC taxonomy code 3336C0003X.
+    columns:
+      - name: pharmacy_hk
+        tests: [unique, not_null]
+      - name: pharmacy_bk
+        tests: [unique, not_null]
+
+  # ---- Links ----
+  - name: lnk_pharmacy_drug
+    description: Links a pharmacy to each drug it has dispensed. Derived from SYNTHETIC fill transactions.
+    columns:
+      - name: pharmacy_drug_hk
+        tests: [unique, not_null]
+      - name: pharmacy_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_pharmacy'), field: pharmacy_hk}
+      - name: drug_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_drug'), field: drug_hk}
+
+  - name: lnk_member_pharmacy
+    description: Links a member to each pharmacy they've used. Derived from SYNTHETIC fill transactions.
+    columns:
+      - name: member_pharmacy_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_member'), field: member_hk}
+      - name: pharmacy_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_pharmacy'), field: pharmacy_hk}
+
+  # ---- Transactional Links ----
+  - name: tlnk_pharmacy_fill_txn
+    description: Prescription fill event facts. SYNTHETIC - see ingestion/pharmacy/README.md.
+    columns:
+      - name: pharmacy_fill_txn_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_member'), field: member_hk}
+      - name: drug_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_drug'), field: drug_hk}
+      - name: pharmacy_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_pharmacy'), field: pharmacy_hk}
+
+  # ---- Satellites ----
+  - name: sat_drug_details
+    description: Drug descriptive attributes over time. Real FDA NDC Directory data.
+    columns:
+      - name: drug_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_drug'), field: drug_hk}
+
+  - name: sat_pharmacy_details
+    description: Pharmacy descriptive attributes over time. Real NPPES data.
+    columns:
+      - name: pharmacy_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_pharmacy'), field: pharmacy_hk}
+
+  - name: lnk_member_suspected_hcc
+    description: >
+      Links a member to an HCC a suspecting engine flagged as plausible
+      but not yet coded. Additive beyond the original ERD scope - built
+      to make HCC Capture Rate and Suspecting Yield Rate computable.
+      SYNTHETIC.
+    columns:
+      - name: member_suspected_hcc_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_member'), field: member_hk}
+      - name: hcc_hk
+        tests:
+          - not_null
+          - relationships: {to: ref('hub_hcc_category'), field: hcc_hk}
