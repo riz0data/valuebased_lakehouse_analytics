@@ -1,0 +1,578 @@
+version: 2
+
+# Semantic models describe the underlying Gold tables to MetricFlow:
+# their primary/foreign keys (entities), the columns you can slice by
+# (dimensions), and the raw aggregatable numbers (measures). Metrics
+# (see metrics.yml) are the business-facing definitions built on top of
+# these measures - this file is the layer beneath what a business user
+# or BI tool ever queries directly.
+
+semantic_models:
+
+  - name: sem_claim_payment
+    description: >
+      One row per claim payment transaction. This is the semantic model
+      behind Total Payment Leakage, Payment Leakage Rate, Leakage by
+      Provider, Days to Adjudication, and YoY Leakage Trend.
+    model: ref('fact_claim_payment')
+    defaults:
+      agg_time_dimension: payment_date
+    entities:
+      - name: claim_payment
+        type: primary
+        expr: payment_txn_hk
+      - name: claim
+        type: foreign
+        expr: claim_line_hk
+      - name: provider
+        type: foreign
+        expr: provider_hk
+      - name: member
+        type: foreign
+        expr: member_hk
+      - name: drg
+        type: foreign
+        expr: drg_hk
+    dimensions:
+      - name: payment_date
+        type: time
+        type_params:
+          time_granularity: day
+      - name: service_from_date
+        type: time
+        type_params:
+          time_granularity: day
+    measures:
+      - name: total_billed_amount
+        description: Sum of billed amounts across claim payment transactions.
+        agg: sum
+        expr: billed_amount
+      - name: total_allowed_amount
+        description: Sum of allowed (contracted) amounts.
+        agg: sum
+        expr: allowed_amount
+      - name: total_paid_amount
+        description: Sum of amounts actually paid.
+        agg: sum
+        expr: paid_amount
+      - name: total_leakage_amount
+        description: Sum of (billed minus paid) across claim payment transactions.
+        agg: sum
+        expr: leakage_amount
+      - name: claim_payment_count
+        description: Count of claim payment transactions - used as the denominator for averages.
+        agg: count
+        expr: payment_txn_hk
+      - name: days_to_adjudication
+        description: Days between service_from_date and payment_date, per claim payment - averaged for the Days to Adjudication metric.
+        agg: average
+        expr: datediff('day', service_from_date, payment_date)
+
+  - name: sem_claim_adjustment
+    description: >
+      One row per claim adjustment transaction. This is the semantic
+      model behind Denial Rate.
+    model: ref('fact_claim_adjustment')
+    defaults:
+      agg_time_dimension: adjustment_date
+    entities:
+      - name: claim_adjustment
+        type: primary
+        expr: adjustment_txn_hk
+      - name: claim
+        type: foreign
+        expr: claim_line_hk
+      - name: provider
+        type: foreign
+        expr: provider_hk
+    dimensions:
+      - name: adjustment_date
+        type: time
+        type_params:
+          time_granularity: day
+      - name: adjustment_reason_code
+        type: categorical
+    measures:
+      - name: adjustment_count
+        description: Count of adjustment transactions - denominator for Denial Rate.
+        agg: count
+        expr: adjustment_txn_hk
+      - name: denial_count
+        description: Count of adjustment transactions specifically reason-coded as denials (CO-* contractual obligation codes).
+        agg: sum
+        expr: "case when adjustment_reason_code like 'CO-%' then 1 else 0 end"
+      - name: total_adjustment_amount
+        description: Sum of adjustment amounts.
+        agg: sum
+        expr: adjustment_amount
+
+  - name: sem_cob_recovery
+    description: >
+      One row per Coordination-of-Benefits recovery transaction. This is
+      the semantic model behind COB / TPL Recovery Amount.
+    model: ref('fact_cob_recovery')
+    defaults:
+      agg_time_dimension: recovery_date
+    entities:
+      - name: cob_recovery
+        type: primary
+        expr: cob_recovery_txn_hk
+      - name: claim
+        type: foreign
+        expr: claim_line_hk
+      - name: member
+        type: foreign
+        expr: member_hk
+    dimensions:
+      - name: recovery_date
+        type: time
+        type_params:
+          time_granularity: day
+    measures:
+      - name: total_recovery_amount
+        description: Sum of COB recovery amounts.
+        agg: sum
+        expr: recovery_amount
+
+  - name: sem_member_risk_score
+    description: >
+      One row per member per model year. This is the semantic model
+      behind RAF Score and YoY RAF Score Trend. SYNTHETIC RAF values -
+      see ingestion/risk_adjustment/README.md.
+    model: ref('fact_member_risk_score')
+    defaults:
+      agg_time_dimension: effective_from
+    entities:
+      - name: member_risk_score
+        type: primary
+        expr: member_risk_score_txn_hk
+      - name: member
+        type: foreign
+        expr: member_hk
+      - name: risk_model
+        type: foreign
+        expr: risk_model_hk
+    dimensions:
+      - name: effective_from
+        type: time
+        type_params:
+          time_granularity: day
+      - name: model_year
+        type: categorical
+    measures:
+      - name: average_raf_score
+        description: Average RAF score across members - the population-level RAF Score metric.
+        agg: average
+        expr: raf_score
+
+  - name: sem_measure_evaluation
+    description: >
+      One row per member per measure per evaluation event. This is the
+      semantic model behind HEDIS-style Measure Compliance Rate and Star
+      Rating Composite Score. SYNTHETIC eval results - see
+      ingestion/clinical_quality/README.md.
+    model: ref('fact_measure_evaluation')
+    defaults:
+      agg_time_dimension: effective_from
+    entities:
+      - name: measure_evaluation
+        type: primary
+        expr: member_measure_eval_txn_hk
+      - name: member
+        type: foreign
+        expr: member_hk
+      - name: measure
+        type: foreign
+        expr: measure_hk
+    dimensions:
+      - name: effective_from
+        type: time
+        type_params:
+          time_granularity: day
+      - name: measure_code
+        type: categorical
+      - name: eval_result
+        type: categorical
+    measures:
+      - name: evaluation_count
+        description: Count of measure evaluation events - denominator for compliance rate.
+        agg: count
+        expr: member_measure_eval_txn_hk
+      - name: met_count
+        description: Count of evaluations where the measure was met.
+        agg: sum
+        expr: "case when eval_result = 'met' then 1 else 0 end"
+      - name: weighted_met_score
+        description: Sum of measure_weight for evaluations where the measure was met - numerator for the weighted Star Rating Composite Score.
+        agg: sum
+        expr: "case when eval_result = 'met' then measure_weight else 0 end"
+      - name: total_possible_weight
+        description: Sum of measure_weight across all evaluations - denominator for the weighted Star Rating Composite Score.
+        agg: sum
+        expr: measure_weight
+
+  - name: sem_encounter
+    description: >
+      One row per clinical encounter. This is the semantic model behind
+      ED Utilization Rate. Real Synthea data.
+    model: ref('fact_encounter')
+    defaults:
+      agg_time_dimension: encounter_start
+    entities:
+      - name: encounter
+        type: primary
+        expr: encounter_hk
+      - name: member
+        type: foreign
+        expr: member_hk
+      - name: provider
+        type: foreign
+        expr: provider_hk
+      - name: facility
+        type: foreign
+        expr: facility_hk
+    dimensions:
+      - name: encounter_start
+        type: time
+        type_params:
+          time_granularity: day
+      - name: encounter_class_code
+        type: categorical
+    measures:
+      - name: encounter_count
+        description: Count of encounters - numerator for ED Utilization Rate when filtered to emergency-class encounters.
+        agg: count
+        expr: encounter_hk
+      - name: ed_encounter_count
+        description: Count of encounters specifically classed as emergency (FHIR Encounter.class code EMER).
+        agg: sum
+        expr: "case when encounter_class_code = 'EMER' then 1 else 0 end"
+      - name: distinct_member_count
+        description: Distinct members with at least one encounter - used as the population denominator for ED Utilization Rate (per thousand members).
+        agg: count_distinct
+        expr: member_hk
+
+  - name: sem_medication_adherence
+    description: >
+      One row per member per drug, holding a simplified Proportion of
+      Days Covered (PDC) over a fixed 365-day period. This is the
+      semantic model behind Medication Adherence (PDC). SYNTHETIC fill
+      events; PDC here is a days-supply-sum approximation, not a full
+      date-overlap calculation - see fact_medication_adherence.sql.
+    model: ref('fact_medication_adherence')
+    entities:
+      - name: medication_adherence
+        type: primary
+        expr: medication_adherence_hk
+      - name: member
+        type: foreign
+        expr: member_hk
+      - name: drug
+        type: foreign
+        expr: drug_hk
+    measures:
+      - name: total_days_covered
+        description: Sum of days covered (capped at the observation period) across all member-drug pairs - numerator for Medication Adherence (PDC).
+        agg: sum
+        expr: days_covered
+      - name: total_possible_days
+        description: Sum of the observation period length (365 days) across all member-drug pairs - denominator for Medication Adherence (PDC).
+        agg: sum
+        expr: period_days
+
+  - name: sem_drg_reimbursement_variance
+    description: >
+      One row per claim with a DRG-coded relative weight. This is the
+      semantic model behind DRG Reimbursement Variance. Real DRG
+      relative weights on real DE-SynPUF claims; "expected" payment is a
+      population-benchmark simplification - see
+      fact_drg_reimbursement_variance.sql.
+    model: ref('fact_drg_reimbursement_variance')
+    entities:
+      - name: drg_payment
+        type: primary
+        expr: payment_txn_hk
+      - name: claim
+        type: foreign
+        expr: claim_line_hk
+      - name: provider
+        type: foreign
+        expr: provider_hk
+      - name: drg
+        type: foreign
+        expr: drg_hk
+    measures:
+      - name: total_reimbursement_variance
+        description: Sum of (actual paid amount minus expected paid amount) across DRG-coded claims.
+        agg: sum
+        expr: reimbursement_variance
+      - name: total_expected_paid_amount
+        description: Sum of expected paid amount (DRG relative weight times the population dollars-per-weight-unit benchmark) - denominator for a normalized variance rate.
+        agg: sum
+        expr: expected_paid_amount
+
+  - name: sem_authorization
+    description: >
+      One row per prior authorization request. This is the semantic
+      model behind Prior Authorization Approval Rate. SYNTHETIC - see
+      ingestion/payment_integrity/README.md.
+    model: ref('fact_authorization')
+    defaults:
+      agg_time_dimension: requested_date
+    entities:
+      - name: authorization
+        type: primary
+        expr: authorization_hk
+      - name: claim
+        type: foreign
+        expr: claim_line_hk
+    dimensions:
+      - name: requested_date
+        type: time
+        type_params:
+          time_granularity: day
+      - name: auth_status
+        type: categorical
+    measures:
+      - name: authorization_count
+        description: Count of prior authorization requests - denominator for Prior Authorization Approval Rate.
+        agg: count
+        expr: authorization_hk
+      - name: authorization_approved_count
+        description: Count of prior authorization requests with status approved - numerator for Prior Authorization Approval Rate.
+        agg: sum
+        expr: "case when auth_status = 'approved' then 1 else 0 end"
+
+  - name: sem_appeal
+    description: >
+      One row per appeal case. This is the semantic model behind Appeal
+      Overturn Rate. SYNTHETIC - see
+      ingestion/payment_integrity/README.md.
+    model: ref('fact_appeal')
+    entities:
+      - name: appeal
+        type: primary
+        expr: appeal_hk
+      - name: claim
+        type: foreign
+        expr: claim_line_hk
+    dimensions:
+      - name: appeal_status
+        type: categorical
+    measures:
+      - name: appeal_count
+        description: Count of appeal cases - denominator for Appeal Overturn Rate.
+        agg: count
+        expr: appeal_hk
+      - name: appeal_overturned_count
+        description: Count of appeal cases with status overturned - numerator for Appeal Overturn Rate.
+        agg: sum
+        expr: "case when appeal_status = 'overturned' then 1 else 0 end"
+
+  - name: sem_hcc_capture
+    description: >
+      One row per member per HCC that is either suspected, captured, or
+      both. This is the semantic model behind HCC Capture Rate and
+      Suspecting Yield Rate. SYNTHETIC - see
+      ingestion/risk_adjustment/README.md.
+    model: ref('fact_hcc_capture')
+    entities:
+      - name: hcc_capture
+        type: primary
+        expr: hcc_capture_hk
+      - name: member
+        type: foreign
+        expr: member_hk
+      - name: hcc
+        type: foreign
+        expr: hcc_hk
+    measures:
+      - name: suspected_hcc_count
+        description: Count of member-HCC pairs flagged as suspected - denominator for both HCC Capture Rate and Suspecting Yield Rate.
+        agg: sum
+        expr: is_suspected
+      - name: captured_hcc_count
+        description: Count of member-HCC pairs actually captured/coded.
+        agg: sum
+        expr: is_captured
+      - name: captured_and_suspected_count
+        description: Count of member-HCC pairs that are both suspected and captured - numerator for HCC Capture Rate and Suspecting Yield Rate.
+        agg: sum
+        expr: is_captured_and_suspected
+
+  - name: sem_coding_gap
+    description: >
+      One row per member-HCC coding-gap lifecycle record. This is the
+      semantic model behind Coding Gap Closure Rate. SYNTHETIC - see
+      ingestion/risk_adjustment/README.md.
+    model: ref('fact_coding_gap')
+    defaults:
+      agg_time_dimension: coding_gap_identified_date
+    entities:
+      - name: coding_gap
+        type: primary
+        expr: member_hcc_hk
+      - name: member
+        type: foreign
+        expr: member_hk
+      - name: hcc
+        type: foreign
+        expr: hcc_hk
+    dimensions:
+      - name: coding_gap_identified_date
+        type: time
+        type_params:
+          time_granularity: day
+    measures:
+      - name: coding_gap_identified_count
+        description: Count of identified coding gaps - denominator for Coding Gap Closure Rate.
+        agg: count
+        expr: member_hcc_hk
+      - name: coding_gap_closed_count
+        description: Count of coding gaps subsequently closed - numerator for Coding Gap Closure Rate.
+        agg: sum
+        expr: is_gap_closed
+
+  - name: sem_member_risk_tier
+    description: >
+      One row per member per model year, with a risk tier assigned.
+      This is the semantic model behind Member Risk Tier Distribution.
+      SYNTHETIC RAF values - see ingestion/risk_adjustment/README.md.
+    model: ref('fact_member_risk_tier')
+    entities:
+      - name: member_risk_tier
+        type: primary
+        expr: member_risk_score_txn_hk
+      - name: member
+        type: foreign
+        expr: member_hk
+    dimensions:
+      - name: risk_tier
+        type: categorical
+    measures:
+      - name: member_count_by_tier
+        description: Count of members in each risk tier - use with group-by risk_tier for the tier distribution.
+        agg: count
+        expr: member_risk_score_txn_hk
+
+  - name: sem_risk_score_accuracy
+    description: >
+      One row per member, comparing actual RAF score to a simplified
+      suspected-RAF approximation. This is the semantic model behind
+      Risk Score Accuracy. See fact_risk_score_accuracy.sql for the
+      HCC-weight-sum simplification note. SYNTHETIC.
+    model: ref('fact_risk_score_accuracy')
+    entities:
+      - name: risk_score_accuracy
+        type: foreign
+        expr: member_hk
+      - name: member
+        type: foreign
+        expr: member_hk
+    measures:
+      - name: total_actual_raf
+        description: Sum of actual (coded) RAF scores across members - numerator input for Risk Score Accuracy.
+        agg: sum
+        expr: actual_raf_score
+      - name: total_suspected_raf_approx
+        description: Sum of the suspected-RAF approximation across members - denominator input for Risk Score Accuracy.
+        agg: sum
+        expr: suspected_raf_approx
+
+  - name: sem_readmission
+    description: >
+      One row per index inpatient encounter, flagged for 30-day
+      all-cause readmission. This is the semantic model behind
+      Readmission Rate. Real Synthea encounter data - see
+      fact_readmission.sql for the all-cause simplification note.
+    model: ref('fact_readmission')
+    defaults:
+      agg_time_dimension: index_discharge_date
+    entities:
+      - name: readmission
+        type: primary
+        expr: index_encounter_hk
+      - name: member
+        type: foreign
+        expr: member_hk
+    dimensions:
+      - name: index_discharge_date
+        type: time
+        type_params:
+          time_granularity: day
+    measures:
+      - name: index_admission_count
+        description: Count of index inpatient encounters - denominator for Readmission Rate.
+        agg: count
+        expr: index_encounter_hk
+      - name: readmission_count
+        description: Count of index encounters followed by a readmission within 30 days - numerator for Readmission Rate.
+        agg: sum
+        expr: is_readmission
+
+  - name: sem_preventive_screening
+    description: >
+      One row per preventive-screening measure evaluation (BCS-E,
+      COL-E). This is the semantic model behind Preventive Screening
+      Completion Rate. SYNTHETIC eval results - see
+      ingestion/clinical_quality/README.md.
+    model: ref('fact_preventive_screening')
+    defaults:
+      agg_time_dimension: eval_date
+    entities:
+      - name: preventive_screening
+        type: primary
+        expr: member_measure_eval_txn_hk
+      - name: member
+        type: foreign
+        expr: member_hk
+      - name: measure
+        type: foreign
+        expr: measure_hk
+    dimensions:
+      - name: eval_date
+        type: time
+        type_params:
+          time_granularity: day
+      - name: measure_code
+        type: categorical
+    measures:
+      - name: screening_eligible_count
+        description: Count of preventive-screening evaluations - denominator for Preventive Screening Completion Rate.
+        agg: count
+        expr: member_measure_eval_txn_hk
+      - name: screening_completed_count
+        description: Count of preventive-screening evaluations with a met result - numerator for Preventive Screening Completion Rate.
+        agg: sum
+        expr: is_completed
+
+  - name: sem_care_gap
+    description: >
+      One row per open care gap (a not-met quality measure evaluation).
+      This is the semantic model behind Care Gap Count. SYNTHETIC eval
+      results - see ingestion/clinical_quality/README.md.
+    model: ref('fact_care_gap')
+    defaults:
+      agg_time_dimension: eval_date
+    entities:
+      - name: care_gap
+        type: primary
+        expr: member_measure_eval_txn_hk
+      - name: member
+        type: foreign
+        expr: member_hk
+      - name: measure
+        type: foreign
+        expr: measure_hk
+    dimensions:
+      - name: eval_date
+        type: time
+        type_params:
+          time_granularity: day
+      - name: measure_code
+        type: categorical
+    measures:
+      - name: open_care_gap_count
+        description: Count of open care gaps - use with group-by member to get per-member counts.
+        agg: count
+        expr: member_measure_eval_txn_hk

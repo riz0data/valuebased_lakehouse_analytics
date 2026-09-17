@@ -1,0 +1,254 @@
+version: 2
+
+models:
+  - name: dim_member
+    description: Conformed Member dimension.
+    columns:
+      - name: member_hk
+        tests: [unique, not_null]
+
+  - name: dim_provider
+    description: Conformed Provider dimension.
+    columns:
+      - name: provider_hk
+        tests: [unique, not_null]
+
+  - name: dim_procedure
+    description: Procedure dimension (ICD-9 procedure codes - see ADR-004 amendment).
+    columns:
+      - name: procedure_hk
+        tests: [unique, not_null]
+
+  - name: fact_claim_payment
+    description: Claim payment fact at the claim-line grain - feeds Total Payment Leakage, Payment Leakage Rate, Leakage by Provider, Days to Adjudication, YoY Leakage Trend.
+    columns:
+      - name: payment_txn_hk
+        tests: [unique, not_null]
+      - name: provider_hk
+        tests:
+          - relationships: {to: ref('dim_provider'), field: provider_hk}
+      - name: member_hk
+        tests:
+          - relationships: {to: ref('dim_member'), field: member_hk}
+
+  - name: fact_claim_adjustment
+    description: Claim adjustment fact - feeds Denial Rate.
+    columns:
+      - name: adjustment_txn_hk
+        tests: [unique, not_null]
+
+  - name: fact_cob_recovery
+    description: COB recovery fact - feeds COB / TPL Recovery Amount.
+    columns:
+      - name: cob_recovery_txn_hk
+        tests: [unique, not_null]
+
+  - name: dim_hcc_category
+    description: HCC category dimension. Real category codes/descriptions; weights illustrative.
+    columns:
+      - name: hcc_hk
+        tests: [unique, not_null]
+
+  - name: fact_member_risk_score
+    description: Member RAF score fact at member/model-year grain - feeds RAF Score and YoY RAF Score Trend. SYNTHETIC RAF values.
+    columns:
+      - name: member_risk_score_txn_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - relationships: {to: ref('dim_member'), field: member_hk}
+
+  - name: dim_encounter
+    description: Encounter dimension. Real Synthea data.
+    columns:
+      - name: encounter_hk
+        tests: [unique, not_null]
+
+  - name: dim_measure
+    description: Quality measure dimension. Real CMS Star Ratings measure codes/names; illustrative weights.
+    columns:
+      - name: measure_hk
+        tests: [unique, not_null]
+
+  - name: fact_encounter
+    description: Encounter fact enriched with member/provider/facility keys - feeds ED Utilization Rate. Real Synthea data.
+    columns:
+      - name: encounter_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - relationships: {to: ref('dim_member'), field: member_hk}
+
+  - name: fact_measure_evaluation
+    description: Quality measure evaluation fact - feeds HEDIS-style Measure Compliance Rate and Star Rating Composite Score. SYNTHETIC eval results.
+    columns:
+      - name: member_measure_eval_txn_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - relationships: {to: ref('dim_member'), field: member_hk}
+
+  - name: dim_drug
+    description: Drug dimension. Real FDA NDC Directory data.
+    columns:
+      - name: drug_hk
+        tests: [unique, not_null]
+
+  - name: fact_pharmacy_fill
+    description: Prescription fill fact - feeds Medication Adherence (PDC). SYNTHETIC fill events on real drug/pharmacy dimensions.
+    columns:
+      - name: pharmacy_fill_txn_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - relationships: {to: ref('dim_member'), field: member_hk}
+      - name: drug_hk
+        tests:
+          - relationships: {to: ref('dim_drug'), field: drug_hk}
+
+  - name: fact_medication_adherence
+    description: >
+      Per-member, per-drug Proportion of Days Covered (PDC) over a fixed
+      365-day period - feeds Medication Adherence (PDC). SYNTHETIC fill
+      events; PDC is a simplified days-supply-sum approximation, not a
+      full date-overlap calculation - see the model's own header comment.
+    columns:
+      - name: medication_adherence_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - relationships: {to: ref('dim_member'), field: member_hk}
+      - name: drug_hk
+        tests:
+          - relationships: {to: ref('dim_drug'), field: drug_hk}
+
+  - name: fact_drg_reimbursement_variance
+    description: >
+      Per-claim DRG reimbursement variance - feeds DRG Reimbursement
+      Variance. Real DRG relative weights on real DE-SynPUF claims;
+      "expected" payment is a population-benchmark simplification, not a
+      true CMS IPPS payment calculation - see the model's own header
+      comment.
+    columns:
+      - name: payment_txn_hk
+        tests: [unique, not_null]
+      - name: claim_line_hk
+        tests:
+          - relationships: {to: ref('fact_claim_payment'), field: claim_line_hk}
+
+  - name: dim_authorization
+    description: Prior authorization dimension. SYNTHETIC - see ingestion/payment_integrity/README.md.
+    columns:
+      - name: authorization_hk
+        tests: [unique, not_null]
+
+  - name: fact_authorization
+    description: Prior authorization fact - feeds Prior Authorization Approval Rate. SYNTHETIC.
+    columns:
+      - name: authorization_hk
+        tests: [unique, not_null]
+
+  - name: dim_appeal
+    description: Appeal case dimension. SYNTHETIC - see ingestion/payment_integrity/README.md.
+    columns:
+      - name: appeal_hk
+        tests: [unique, not_null]
+
+  - name: fact_appeal
+    description: Appeal fact - feeds Appeal Overturn Rate. SYNTHETIC.
+    columns:
+      - name: appeal_hk
+        tests: [unique, not_null]
+
+  - name: dim_drg
+    description: DRG dimension. Real DE-SynPUF DRG codes enriched with real (illustrative-subset) CMS MS-DRG relative weights.
+    columns:
+      - name: drg_hk
+        tests: [unique, not_null]
+
+  - name: fact_hcc_capture
+    description: >
+      Per-member, per-HCC suspected-vs-captured comparison - feeds HCC
+      Capture Rate and Suspecting Yield Rate. SYNTHETIC - see
+      ingestion/risk_adjustment/README.md.
+    columns:
+      - name: hcc_capture_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - relationships: {to: ref('dim_member'), field: member_hk}
+      - name: hcc_hk
+        tests:
+          - relationships: {to: ref('dim_hcc_category'), field: hcc_hk}
+
+  - name: fact_coding_gap
+    description: >
+      Per-member-HCC coding-gap lifecycle fact - feeds Coding Gap
+      Closure Rate. SYNTHETIC - see ingestion/risk_adjustment/README.md.
+    columns:
+      - name: member_hcc_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - relationships: {to: ref('dim_member'), field: member_hk}
+
+  - name: fact_member_risk_tier
+    description: >
+      Per-member/model-year RAF score bucketed into a risk tier - feeds
+      Member Risk Tier Distribution. Tier cut points are an illustrative
+      repo convention, not a CMS standard. SYNTHETIC.
+    columns:
+      - name: member_risk_score_txn_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - relationships: {to: ref('dim_member'), field: member_hk}
+
+  - name: fact_risk_score_accuracy
+    description: >
+      Per-member comparison of actual RAF score to a simplified
+      suspected-RAF approximation - feeds Risk Score Accuracy. See the
+      model's own header comment on the HCC-weight-sum simplification.
+      SYNTHETIC.
+    columns:
+      - name: member_hk
+        tests:
+          - relationships: {to: ref('dim_member'), field: member_hk}
+
+  - name: fact_readmission
+    description: >
+      30-day all-cause readmission fact at the index-inpatient-encounter
+      grain - feeds Readmission Rate. Real Synthea encounter data
+      (including 2 fixture encounters added specifically to demonstrate
+      a readmission scenario - see ingestion/synthea/sample_bundles).
+      General all-cause version, no planned-readmission exclusions - see
+      the model's own header comment.
+    columns:
+      - name: index_encounter_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - relationships: {to: ref('dim_member'), field: member_hk}
+
+  - name: fact_preventive_screening
+    description: >
+      Preventive-screening subset of fact_measure_evaluation (BCS-E,
+      COL-E) - feeds Preventive Screening Completion Rate. SYNTHETIC
+      eval results on real CMS Star Ratings measure codes.
+    columns:
+      - name: member_measure_eval_txn_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - relationships: {to: ref('dim_member'), field: member_hk}
+
+  - name: fact_care_gap
+    description: >
+      Open-care-gap subset of fact_measure_evaluation (not-met
+      evaluations) - feeds Care Gap Count. SYNTHETIC eval results.
+    columns:
+      - name: member_measure_eval_txn_hk
+        tests: [unique, not_null]
+      - name: member_hk
+        tests:
+          - relationships: {to: ref('dim_member'), field: member_hk}
