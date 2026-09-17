@@ -2,11 +2,19 @@ name: 'value_based_care_lakehouse'
 version: '1.0.0'
 config-version: 2
 
+# Officially tested against dbt 1.9.x per the automate_dv package docs.
+require-dbt-version: [">=1.7.0", "<2.0.0"]
+
 profile: 'value_based_care_lakehouse'
 
 model-paths: ["models"]
 test-paths: ["tests"]
 macro-paths: ["macros"]
+
+vars:
+  # automate_dv global config
+  hash: MD5
+  hash_content_type: BINARY
 
 models:
   value_based_care_lakehouse:
@@ -15,13 +23,17 @@ models:
     vault:
       hubs:
         +materialized: incremental
+        +tags: ['vault', 'hub']
       links:
         +materialized: incremental
+        +tags: ['vault', 'link']
       satellites:
         +materialized: incremental
+        +tags: ['vault', 'satellite']
       tlinks:
         +materialized: incremental
+        +tags: ['vault', 't_link']
     gold:
-      +materialized: incremental
+      +materialized: table
     semantic:
       +materialized: view
