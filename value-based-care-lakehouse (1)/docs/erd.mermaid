@@ -1,0 +1,449 @@
+erDiagram
+    %% ============================================================
+    %% Value-Based Care Lakehouse - Data Vault 2.0 Entity Model
+    %% Built on open data: CMS DE-SynPUF, Synthea, NPPES, CMS-HCC,
+    %% ICD-10-CM, HCPCS Level II, FDA NDC Directory, CMS Star Ratings
+    %% 18 Hubs | 17 Links | 6 Transactional Links | 18 Satellites
+    %% ============================================================
+
+    %% ---------------- CORE HUBS (conformed across all domains) ----------------
+    HUB_MEMBER {
+        string member_hk PK
+        string member_bk "Synthetic beneficiary ID (DE-SynPUF / Synthea patient ID)"
+        timestamp load_dts
+        string record_source
+    }
+    HUB_PROVIDER {
+        string provider_hk PK
+        string provider_bk "NPI (NPPES)"
+        timestamp load_dts
+        string record_source
+    }
+    HUB_FACILITY {
+        string facility_hk PK
+        string facility_bk "NPPES organizational NPI"
+        timestamp load_dts
+        string record_source
+    }
+    HUB_CLAIM_LINE {
+        string claim_line_hk PK
+        string claim_line_bk "DE-SynPUF claim line ID"
+        timestamp load_dts
+        string record_source
+    }
+    HUB_DIAGNOSIS {
+        string diagnosis_hk PK
+        string diagnosis_bk "ICD-10-CM code"
+        timestamp load_dts
+        string record_source
+    }
+    HUB_PLAN {
+        string plan_hk PK
+        string plan_bk "Synthetic plan/contract ID"
+        timestamp load_dts
+        string record_source
+    }
+    HUB_EMPLOYER_GROUP {
+        string employer_group_hk PK
+        string employer_group_bk "Synthetic group ID"
+        timestamp load_dts
+        string record_source
+    }
+
+    %% ---------------- PAYMENT INTEGRITY DOMAIN ----------------
+    HUB_PROCEDURE {
+        string procedure_hk PK
+        string procedure_bk "HCPCS Level II code (not CPT - AMA licensed)"
+        timestamp load_dts
+        string record_source
+    }
+    HUB_DRG {
+        string drg_hk PK
+        string drg_bk "DRG code"
+        timestamp load_dts
+        string record_source
+    }
+    HUB_CONTRACT {
+        string contract_hk PK
+        string contract_bk "Synthetic VBC contract ID"
+        timestamp load_dts
+        string record_source
+    }
+    HUB_AUTHORIZATION {
+        string authorization_hk PK
+        string authorization_bk "Synthetic prior-auth ID"
+        timestamp load_dts
+        string record_source
+    }
+    HUB_APPEAL {
+        string appeal_hk PK
+        string appeal_bk "Synthetic appeal case ID"
+        timestamp load_dts
+        string record_source
+    }
+
+    %% ---------------- RISK ADJUSTMENT DOMAIN ----------------
+    HUB_HCC_CATEGORY {
+        string hcc_hk PK
+        string hcc_bk "CMS-HCC category code"
+        timestamp load_dts
+        string record_source
+    }
+    HUB_RISK_MODEL {
+        string risk_model_hk PK
+        string risk_model_bk "CMS-HCC model version/year"
+        timestamp load_dts
+        string record_source
+    }
+
+    %% ---------------- CLINICAL QUALITY DOMAIN ----------------
+    HUB_ENCOUNTER {
+        string encounter_hk PK
+        string encounter_bk "Synthea encounter ID"
+        timestamp load_dts
+        string record_source
+    }
+    HUB_MEASURE {
+        string measure_hk PK
+        string measure_bk "CMS Star Ratings measure code"
+        timestamp load_dts
+        string record_source
+    }
+
+    %% ---------------- PHARMACY DOMAIN ----------------
+    HUB_DRUG {
+        string drug_hk PK
+        string drug_bk "NDC (FDA NDC Directory)"
+        timestamp load_dts
+        string record_source
+    }
+    HUB_PHARMACY {
+        string pharmacy_hk PK
+        string pharmacy_bk "NPPES pharmacy NPI"
+        timestamp load_dts
+        string record_source
+    }
+
+    %% ---------------- LINKS ----------------
+    LNK_CLAIM_PROVIDER_MEMBER {
+        string link_hk PK
+        string claim_line_hk FK
+        string provider_hk FK
+        string member_hk FK
+    }
+    LNK_CLAIM_DRG {
+        string link_hk PK
+        string claim_line_hk FK
+        string drg_hk FK
+    }
+    LNK_MEMBER_HCC {
+        string link_hk PK
+        string member_hk FK
+        string hcc_hk FK
+    }
+    LNK_DIAGNOSIS_HCC_CROSSWALK {
+        string link_hk PK
+        string diagnosis_hk FK
+        string hcc_hk FK
+        string risk_model_hk FK
+    }
+    LNK_MEMBER_MEASURE {
+        string link_hk PK
+        string member_hk FK
+        string measure_hk FK
+    }
+    LNK_MEMBER_PLAN {
+        string link_hk PK
+        string member_hk FK
+        string plan_hk FK
+    }
+    LNK_PLAN_EMPLOYER_GROUP {
+        string link_hk PK
+        string plan_hk FK
+        string employer_group_hk FK
+    }
+    LNK_PROVIDER_CONTRACT {
+        string link_hk PK
+        string provider_hk FK
+        string contract_hk FK
+    }
+    LNK_CLAIM_AUTHORIZATION {
+        string link_hk PK
+        string claim_line_hk FK
+        string authorization_hk FK
+    }
+    LNK_CLAIM_APPEAL {
+        string link_hk PK
+        string claim_line_hk FK
+        string appeal_hk FK
+    }
+    LNK_CLAIM_PROCEDURE {
+        string link_hk PK
+        string claim_line_hk FK
+        string procedure_hk FK
+    }
+    LNK_MEMBER_ENCOUNTER {
+        string link_hk PK
+        string member_hk FK
+        string encounter_hk FK
+    }
+    LNK_ENCOUNTER_PROVIDER {
+        string link_hk PK
+        string encounter_hk FK
+        string provider_hk FK
+    }
+    LNK_ENCOUNTER_FACILITY {
+        string link_hk PK
+        string encounter_hk FK
+        string facility_hk FK
+    }
+    LNK_ENCOUNTER_DIAGNOSIS {
+        string link_hk PK
+        string encounter_hk FK
+        string diagnosis_hk FK
+    }
+    LNK_PHARMACY_DRUG {
+        string link_hk PK
+        string pharmacy_hk FK
+        string drug_hk FK
+    }
+    LNK_MEMBER_PHARMACY {
+        string link_hk PK
+        string member_hk FK
+        string pharmacy_hk FK
+    }
+
+    %% ---------------- TRANSACTIONAL LINKS (immutable events) ----------------
+    TLNK_CLAIM_PAYMENT_TXN {
+        string txn_hk PK
+        string claim_line_hk FK
+        decimal paid_amount
+        decimal allowed_amount
+        decimal billed_amount
+        date payment_date
+    }
+    TLNK_CLAIM_ADJUSTMENT_TXN {
+        string txn_hk PK
+        string claim_line_hk FK
+        decimal adjustment_amount
+        string adjustment_reason_code
+        date adjustment_date
+    }
+    TLNK_COB_RECOVERY_TXN {
+        string txn_hk PK
+        string claim_line_hk FK
+        decimal recovery_amount
+        date recovery_date
+    }
+    TLNK_MEMBER_RISK_SCORE_TXN {
+        string txn_hk PK
+        string member_hk FK
+        string risk_model_hk FK
+        decimal raf_score
+        int model_year
+    }
+    TLNK_MEMBER_MEASURE_EVAL_TXN {
+        string txn_hk PK
+        string member_hk FK
+        string measure_hk FK
+        string eval_result
+        date eval_date
+    }
+    TLNK_PHARMACY_FILL_TXN {
+        string txn_hk PK
+        string member_hk FK
+        string drug_hk FK
+        string pharmacy_hk FK
+        date fill_date
+        int days_supply
+    }
+
+    %% ---------------- SATELLITES ----------------
+    SAT_MEMBER_DEMOGRAPHICS {
+        string member_hk FK
+        date birth_date
+        string sex
+        string race_ethnicity
+        string state
+        timestamp load_dts
+    }
+    SAT_PROVIDER_DETAILS {
+        string provider_hk FK
+        string specialty_taxonomy
+        string provider_name
+        string practice_state
+        timestamp load_dts
+    }
+    SAT_FACILITY_DETAILS {
+        string facility_hk FK
+        string facility_type
+        string facility_name
+        string state
+        timestamp load_dts
+    }
+    SAT_CLAIM_DETAILS {
+        string claim_line_hk FK
+        date service_date
+        string place_of_service
+        string claim_type
+        timestamp load_dts
+    }
+    SAT_DIAGNOSIS_DETAILS {
+        string diagnosis_hk FK
+        string icd10_description
+        string diagnosis_category
+        timestamp load_dts
+    }
+    SAT_PLAN_DETAILS {
+        string plan_hk FK
+        string plan_type
+        string contract_type
+        timestamp load_dts
+    }
+    SAT_EMPLOYER_GROUP_DETAILS {
+        string employer_group_hk FK
+        string group_name
+        string group_size_band
+        timestamp load_dts
+    }
+    SAT_PROCEDURE_DETAILS {
+        string procedure_hk FK
+        string hcpcs_description
+        string procedure_category
+        timestamp load_dts
+    }
+    SAT_DRG_DETAILS {
+        string drg_hk FK
+        string drg_description
+        decimal drg_weight
+        timestamp load_dts
+    }
+    SAT_CONTRACT_DETAILS {
+        string contract_hk FK
+        string contract_model "MSSP, capitated, shared savings"
+        date effective_date
+        timestamp load_dts
+    }
+    SAT_AUTHORIZATION_DETAILS {
+        string authorization_hk FK
+        string auth_status
+        date requested_date
+        timestamp load_dts
+    }
+    SAT_APPEAL_DETAILS {
+        string appeal_hk FK
+        string appeal_status
+        string appeal_reason
+        timestamp load_dts
+    }
+    SAT_HCC_CATEGORY_DETAILS {
+        string hcc_hk FK
+        string hcc_description
+        decimal hcc_weight
+        timestamp load_dts
+    }
+    SAT_RISK_MODEL_DETAILS {
+        string risk_model_hk FK
+        string model_name "CMS-HCC V24, V28, etc."
+        timestamp load_dts
+    }
+    SAT_MEMBER_HCC_STATUS {
+        string member_hk FK
+        string hcc_hk FK
+        boolean active_flag
+        date coding_gap_identified_date
+        timestamp load_dts
+    }
+    SAT_ENCOUNTER_DETAILS {
+        string encounter_hk FK
+        string encounter_type
+        date encounter_date
+        timestamp load_dts
+    }
+    SAT_MEASURE_DEFINITION {
+        string measure_hk FK
+        string measure_name "CMS Star Ratings measure"
+        decimal measure_weight
+        timestamp load_dts
+    }
+    SAT_DRUG_DETAILS {
+        string drug_hk FK
+        string drug_name "FDA NDC Directory"
+        string drug_class
+        timestamp load_dts
+    }
+    SAT_PHARMACY_DETAILS {
+        string pharmacy_hk FK
+        string pharmacy_name
+        string pharmacy_type
+        timestamp load_dts
+    }
+
+    %% ---------------- RELATIONSHIPS ----------------
+    HUB_MEMBER ||--o{ LNK_CLAIM_PROVIDER_MEMBER : has
+    HUB_PROVIDER ||--o{ LNK_CLAIM_PROVIDER_MEMBER : has
+    HUB_CLAIM_LINE ||--o{ LNK_CLAIM_PROVIDER_MEMBER : has
+    HUB_CLAIM_LINE ||--o{ LNK_CLAIM_DRG : has
+    HUB_DRG ||--o{ LNK_CLAIM_DRG : has
+    HUB_MEMBER ||--o{ LNK_MEMBER_HCC : has
+    HUB_HCC_CATEGORY ||--o{ LNK_MEMBER_HCC : has
+    HUB_DIAGNOSIS ||--o{ LNK_DIAGNOSIS_HCC_CROSSWALK : has
+    HUB_HCC_CATEGORY ||--o{ LNK_DIAGNOSIS_HCC_CROSSWALK : has
+    HUB_RISK_MODEL ||--o{ LNK_DIAGNOSIS_HCC_CROSSWALK : has
+    HUB_MEMBER ||--o{ LNK_MEMBER_MEASURE : has
+    HUB_MEASURE ||--o{ LNK_MEMBER_MEASURE : has
+    HUB_MEMBER ||--o{ LNK_MEMBER_PLAN : has
+    HUB_PLAN ||--o{ LNK_MEMBER_PLAN : has
+    HUB_PLAN ||--o{ LNK_PLAN_EMPLOYER_GROUP : has
+    HUB_EMPLOYER_GROUP ||--o{ LNK_PLAN_EMPLOYER_GROUP : has
+    HUB_PROVIDER ||--o{ LNK_PROVIDER_CONTRACT : has
+    HUB_CONTRACT ||--o{ LNK_PROVIDER_CONTRACT : has
+    HUB_CLAIM_LINE ||--o{ LNK_CLAIM_AUTHORIZATION : has
+    HUB_AUTHORIZATION ||--o{ LNK_CLAIM_AUTHORIZATION : has
+    HUB_CLAIM_LINE ||--o{ LNK_CLAIM_APPEAL : has
+    HUB_APPEAL ||--o{ LNK_CLAIM_APPEAL : has
+    HUB_CLAIM_LINE ||--o{ LNK_CLAIM_PROCEDURE : has
+    HUB_PROCEDURE ||--o{ LNK_CLAIM_PROCEDURE : has
+    HUB_MEMBER ||--o{ LNK_MEMBER_ENCOUNTER : has
+    HUB_ENCOUNTER ||--o{ LNK_MEMBER_ENCOUNTER : has
+    HUB_ENCOUNTER ||--o{ LNK_ENCOUNTER_PROVIDER : has
+    HUB_PROVIDER ||--o{ LNK_ENCOUNTER_PROVIDER : has
+    HUB_ENCOUNTER ||--o{ LNK_ENCOUNTER_FACILITY : has
+    HUB_FACILITY ||--o{ LNK_ENCOUNTER_FACILITY : has
+    HUB_ENCOUNTER ||--o{ LNK_ENCOUNTER_DIAGNOSIS : has
+    HUB_DIAGNOSIS ||--o{ LNK_ENCOUNTER_DIAGNOSIS : has
+    HUB_PHARMACY ||--o{ LNK_PHARMACY_DRUG : has
+    HUB_DRUG ||--o{ LNK_PHARMACY_DRUG : has
+    HUB_MEMBER ||--o{ LNK_MEMBER_PHARMACY : has
+    HUB_PHARMACY ||--o{ LNK_MEMBER_PHARMACY : has
+
+    HUB_CLAIM_LINE ||--o{ TLNK_CLAIM_PAYMENT_TXN : has
+    HUB_CLAIM_LINE ||--o{ TLNK_CLAIM_ADJUSTMENT_TXN : has
+    HUB_CLAIM_LINE ||--o{ TLNK_COB_RECOVERY_TXN : has
+    HUB_MEMBER ||--o{ TLNK_MEMBER_RISK_SCORE_TXN : has
+    HUB_RISK_MODEL ||--o{ TLNK_MEMBER_RISK_SCORE_TXN : has
+    HUB_MEMBER ||--o{ TLNK_MEMBER_MEASURE_EVAL_TXN : has
+    HUB_MEASURE ||--o{ TLNK_MEMBER_MEASURE_EVAL_TXN : has
+    HUB_MEMBER ||--o{ TLNK_PHARMACY_FILL_TXN : has
+    HUB_DRUG ||--o{ TLNK_PHARMACY_FILL_TXN : has
+    HUB_PHARMACY ||--o{ TLNK_PHARMACY_FILL_TXN : has
+
+    HUB_MEMBER ||--o| SAT_MEMBER_DEMOGRAPHICS : describes
+    HUB_PROVIDER ||--o| SAT_PROVIDER_DETAILS : describes
+    HUB_FACILITY ||--o| SAT_FACILITY_DETAILS : describes
+    HUB_CLAIM_LINE ||--o| SAT_CLAIM_DETAILS : describes
+    HUB_DIAGNOSIS ||--o| SAT_DIAGNOSIS_DETAILS : describes
+    HUB_PLAN ||--o| SAT_PLAN_DETAILS : describes
+    HUB_EMPLOYER_GROUP ||--o| SAT_EMPLOYER_GROUP_DETAILS : describes
+    HUB_PROCEDURE ||--o| SAT_PROCEDURE_DETAILS : describes
+    HUB_DRG ||--o| SAT_DRG_DETAILS : describes
+    HUB_CONTRACT ||--o| SAT_CONTRACT_DETAILS : describes
+    HUB_AUTHORIZATION ||--o| SAT_AUTHORIZATION_DETAILS : describes
+    HUB_APPEAL ||--o| SAT_APPEAL_DETAILS : describes
+    HUB_HCC_CATEGORY ||--o| SAT_HCC_CATEGORY_DETAILS : describes
+    HUB_RISK_MODEL ||--o| SAT_RISK_MODEL_DETAILS : describes
+    LNK_MEMBER_HCC ||--o| SAT_MEMBER_HCC_STATUS : describes
+    HUB_ENCOUNTER ||--o| SAT_ENCOUNTER_DETAILS : describes
+    HUB_MEASURE ||--o| SAT_MEASURE_DEFINITION : describes
+    HUB_DRUG ||--o| SAT_DRUG_DETAILS : describes
+    HUB_PHARMACY ||--o| SAT_PHARMACY_DETAILS : describes

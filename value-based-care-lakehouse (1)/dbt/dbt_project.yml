@@ -1,0 +1,27 @@
+name: 'value_based_care_lakehouse'
+version: '1.0.0'
+config-version: 2
+
+profile: 'value_based_care_lakehouse'
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+models:
+  value_based_care_lakehouse:
+    staging:
+      +materialized: view
+    vault:
+      hubs:
+        +materialized: incremental
+      links:
+        +materialized: incremental
+      satellites:
+        +materialized: incremental
+      tlinks:
+        +materialized: incremental
+    gold:
+      +materialized: incremental
+    semantic:
+      +materialized: view
