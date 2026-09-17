@@ -1,0 +1,2 @@
+pytest>=7.0    # for running test_make_payment_integrity_sample.py
+# no other dependencies - uses only the Python standard library

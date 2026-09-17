@@ -1,0 +1,2 @@
+stdlib only - no external dependencies for generation.
+pytest  # optional, for running tests via pytest instead of the manual runner

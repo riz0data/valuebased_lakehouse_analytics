@@ -1,0 +1,51 @@
+"""
+Generates a small sample CSV in the exact NPPES bulk file column format,
+using fabricated (not real) NPI numbers and names, purely so land_nppes.py
+can be tested end-to-end without needing to download the real ~9GB file
+from CMS (which this sandbox's network cannot reach).
+
+This is a TEST FIXTURE ONLY - not part of the shipped ingestion pipeline.
+"""
+import csv
+import random
+
+HEADER = [
+    "NPI", "Entity Type Code", "Provider Organization Name (Legal Business Name)",
+    "Provider Last Name (Legal Name)", "Provider First Name", "Provider Middle Name",
+    "Provider Credential Text", "Provider First Line Business Practice Location Address",
+    "Provider Second Line Business Practice Location Address",
+    "Provider Business Practice Location Address City Name",
+    "Provider Business Practice Location Address State Name",
+    "Provider Business Practice Location Address Postal Code",
+    "Healthcare Provider Taxonomy Code_1",
+    "Healthcare Provider Primary Taxonomy Switch_1",
+    "Provider Enumeration Date", "Last Update Date", "NPI Deactivation Date",
+    "Is Sole Proprietor",
+]
+
+INDIVIDUAL_ROWS = [
+    ["1234567890", "1", "", "SMITH", "JANE", "A", "MD", "100 MAIN ST", "",
+     "RALEIGH", "NC", "276010000", "207Q00000X", "Y", "01/01/2010", "06/15/2024", "", "N"],
+    ["2345678901", "1", "", "GARCIA", "LUIS", "", "DO", "200 ELM ST", "SUITE 4",
+     "DURHAM", "NC", "277010000", "208D00000X", "Y", "03/12/2012", "02/01/2023", "", "Y"],
+    ["3456789012", "1", "", "PATEL", "ANITA", "R", "NP", "300 OAK AVE", "",
+     "CARY", "NC", "275110000", "363L00000X", "Y", "07/22/2015", "11/30/2022", "", "N"],
+]
+
+ORG_ROWS = [
+    ["4567890123", "2", "RALEIGH GENERAL HOSPITAL", "", "", "", "", "500 HOSPITAL DR", "",
+     "RALEIGH", "NC", "276030000", "282N00000X", "Y", "05/09/2005", "01/10/2024", "", ""],
+    ["5678901234", "2", "TRIANGLE FAMILY CLINIC PLLC", "", "", "", "", "600 CLINIC WAY", "BLDG B",
+     "DURHAM", "NC", "277050000", "261QF0400X", "Y", "09/17/2018", "08/20/2023", "", ""],
+    # Duplicate NPI with a later update date, to exercise de-dupe logic
+    ["4567890123", "2", "RALEIGH GENERAL HOSPITAL", "", "", "", "", "500 HOSPITAL DR", "",
+     "RALEIGH", "NC", "276030000", "282N00000X", "Y", "05/09/2005", "09/01/2024", "", ""],
+]
+
+with open("/home/claude/nppes_work/sample_nppes.csv", "w", newline="") as f:
+    writer = csv.writer(f)
+    writer.writerow(HEADER)
+    for row in INDIVIDUAL_ROWS + ORG_ROWS:
+        writer.writerow(row)
+
+print("Sample NPPES file written.")

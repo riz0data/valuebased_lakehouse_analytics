@@ -1,0 +1,3 @@
+pandas>=2.0
+pyarrow>=14.0  # optional: enables Parquet output; falls back to CSV if absent
+pytest>=7.0    # for running test_land_nppes.py

@@ -1,0 +1,7 @@
+member_bk,measure_bk,eval_result,eval_date
+MBR-001,BCS-E,met,2024-12-31
+MBR-001,D10,met,2024-12-31
+MBR-001,COL-E,not_met,2024-12-31
+MBR-002,CBP,met,2024-12-31
+MBR-002,D10,met,2024-12-31
+MBR-003,BCS-E,met,2024-12-31

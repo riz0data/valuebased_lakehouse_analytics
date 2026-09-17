@@ -1,0 +1,7 @@
+hcc_bk,hcc_description,hcc_weight
+HCC8,Metastatic Cancer and Acute Leukemia,0.821
+HCC18,Diabetes with Chronic Complications,0.176
+HCC38,Rheumatoid Arthritis and Inflammatory Connective Tissue Disease,0.439
+HCC85,Congestive Heart Failure,0.384
+HCC111,Chronic Obstructive Pulmonary Disease,0.923
+HCC138,"Chronic Kidney Disease, Stage 5",0.861

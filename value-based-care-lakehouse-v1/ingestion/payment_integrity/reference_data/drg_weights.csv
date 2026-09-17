@@ -1,0 +1,5 @@
+drg_bk,drg_description,drg_relative_weight,weight_source_note
+291,Heart Failure and Shock with MCC,1.2890,Illustrative FY reference weight - see ingestion/payment_integrity/README.md
+292,Heart Failure and Shock with CC,0.8521,Illustrative FY reference weight - see ingestion/payment_integrity/README.md
+293,Heart Failure and Shock without CC/MCC,0.5952,Illustrative FY reference weight - see ingestion/payment_integrity/README.md
+470,Major Hip and Knee Joint Replacement or Reattachment of Lower Extremity without MCC,1.9289,Illustrative FY reference weight - see ingestion/payment_integrity/README.md

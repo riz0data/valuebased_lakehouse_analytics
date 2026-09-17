@@ -1,0 +1,6 @@
+measure_bk,measure_name,measure_weight
+BCS-E,Breast Cancer Screening,1.0
+CBP,Controlling High Blood Pressure,3.0
+COL-E,Colorectal Cancer Screening,1.0
+D09,Medication Adherence for Hypertension (RAS antagonists),3.0
+D10,Medication Adherence for Cholesterol (Statins),3.0

@@ -1,0 +1,159 @@
+# Databricks Asset Bundle (DAB) configuration.
+#
+# Defines the two Databricks jobs that orchestrate this project's
+# pipeline end to end:
+#   1. ingestion_job - runs the 7 ingestion/landing scripts against
+#      their small committed sample fixtures (real deployments would
+#      point these at the actual CMS/NPPES/Synthea/FDA source files -
+#      see each ingestion/<domain>/README.md), landing Bronze tables.
+#   2. dbt_build_job - runs `dbt build` (Bronze -> Vault -> Gold ->
+#      Semantic Layer), depends on ingestion_job completing first.
+#
+# Like .github/ci-profiles/profiles.yml, every credential here is a
+# variable resolved at deploy/run time, never a literal secret. This
+# portfolio repo does not have a permanently running Databricks
+# workspace behind it - see README.md's Advisory & Consulting /
+# "Running this yourself" sections for how to point this at your own
+# workspace.
+#
+# Deploy with: databricks bundle deploy --target dev
+# Run with:    databricks bundle run ingestion_job --target dev
+#              databricks bundle run dbt_build_job --target dev
+
+bundle:
+  name: value_based_care_lakehouse
+
+variables:
+  warehouse_id:
+    description: "Databricks SQL Warehouse ID that dbt_build_job runs against"
+    default: "REPLACE_WITH_YOUR_WAREHOUSE_ID"
+  catalog:
+    description: "Unity Catalog catalog name for landed Bronze + built Silver/Gold tables"
+    default: "vbc_lakehouse_dev"
+
+resources:
+  jobs:
+    ingestion_job:
+      name: "${bundle.name}-ingestion-${bundle.target}"
+      description: >
+        Lands all 7 ingestion modules' output into Bronze Delta tables in
+        the ${var.catalog} catalog. Each task runs independently (no
+        task depends on another) since the modules have no cross-module
+        imports - see ingestion/<domain>/README.md for what each one
+        lands and its real-vs-synthetic data honesty note.
+      tasks:
+        - task_key: land_nppes
+          environment_key: default
+          spark_python_task:
+            python_file: ../ingestion/nppes/land_nppes.py
+            parameters: ["--input", "sample_nppes.csv", "--output-dir", "/Volumes/${var.catalog}/bronze/nppes"]
+
+        - task_key: land_de_synpuf
+          environment_key: default
+          spark_python_task:
+            python_file: ../ingestion/de_synpuf/land_de_synpuf.py
+            parameters: ["--bene-input", "sample_bene_summary.csv",
+                         "--inpatient-input", "sample_inpatient_claims.csv",
+                         "--output-dir", "/Volumes/${var.catalog}/bronze/de_synpuf"]
+
+        - task_key: land_synthea
+          environment_key: default
+          spark_python_task:
+            python_file: ../ingestion/synthea/land_synthea.py
+            parameters: ["--input-dir", "sample_bundles", "--output-dir", "/Volumes/${var.catalog}/bronze/synthea"]
+
+        - task_key: land_ndc
+          environment_key: default
+          spark_python_task:
+            python_file: ../ingestion/pharmacy/land_ndc.py
+            parameters: ["--input-dir", "sample_data", "--output-dir", "/Volumes/${var.catalog}/bronze/pharmacy"]
+
+        - task_key: make_payment_integrity_sample
+          environment_key: default
+          spark_python_task:
+            python_file: ../ingestion/payment_integrity/make_payment_integrity_sample.py
+            parameters: ["--claim-bks", "CLM-001", "CLM-002", "CLM-003", "CLM-004",
+                         "--provider-bks", "NPI-1111111111", "NPI-2222222222",
+                         "--output-dir", "/Volumes/${var.catalog}/bronze/payment_integrity"]
+
+        - task_key: make_risk_adjustment_sample
+          environment_key: default
+          spark_python_task:
+            python_file: ../ingestion/risk_adjustment/make_risk_adjustment_sample.py
+            parameters: ["--member-bks", "MBR-001", "MBR-002", "MBR-003",
+                         "--output-dir", "/Volumes/${var.catalog}/bronze/risk_adjustment"]
+
+        - task_key: make_clinical_quality_sample
+          environment_key: default
+          spark_python_task:
+            python_file: ../ingestion/clinical_quality/make_clinical_quality_sample.py
+            parameters: ["--member-bks", "MBR-001", "MBR-002", "MBR-003",
+                         "--output-dir", "/Volumes/${var.catalog}/bronze/clinical_quality"]
+
+        - task_key: make_pharmacy_fill_sample
+          environment_key: default
+          spark_python_task:
+            python_file: ../ingestion/pharmacy/make_pharmacy_fill_sample.py
+            parameters: ["--member-bks", "MBR-001", "MBR-002", "MBR-003",
+                         "--drug-bks", "0069-2587", "0378-3856",
+                         "--pharmacy-bks", "6789012345",
+                         "--output-dir", "/Volumes/${var.catalog}/bronze/pharmacy"]
+
+      environments:
+        - environment_key: default
+          spec:
+            client: "1"
+            dependencies:
+              - pandas>=2.0
+              - pyarrow>=14.0
+
+    dbt_build_job:
+      name: "${bundle.name}-dbt-build-${bundle.target}"
+      description: >
+        Runs the real dbt pipeline (deps, build, test) against the Data
+        Vault + Gold + Semantic Layer models in /dbt - see
+        dbt/models/*/README.md for what's implemented in each layer.
+      trigger:
+        periodic:
+          interval: 1
+          unit: DAYS
+      email_notifications:
+        on_failure: []  # add your email here to get failure notifications
+      tasks:
+        - task_key: run_ingestion
+          run_job_task:
+            job_id: ${resources.jobs.ingestion_job.id}
+        - task_key: run_dbt
+          depends_on:
+            - task_key: run_ingestion
+          dbt_task:
+            project_directory: ../dbt
+            commands:
+              - "dbt deps"
+              - "dbt build"
+              - "dbt test"
+            warehouse_id: ${var.warehouse_id}
+            catalog: ${var.catalog}
+            schema: gold
+          libraries:
+            - pypi:
+                package: "dbt-databricks>=1.7.0,<2.0.0"
+
+targets:
+  dev:
+    default: true
+    mode: development
+    workspace:
+      host: https://<your-databricks-workspace>.cloud.databricks.com
+    variables:
+      catalog: vbc_lakehouse_dev
+
+  prod:
+    mode: production
+    workspace:
+      host: https://<your-databricks-workspace>.cloud.databricks.com
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: vbc_lakehouse
+    run_as:
+      service_principal_name: "REPLACE_WITH_YOUR_SERVICE_PRINCIPAL"

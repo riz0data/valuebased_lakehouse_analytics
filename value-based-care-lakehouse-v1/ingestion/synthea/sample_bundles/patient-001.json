@@ -1,0 +1,150 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:pat-001",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "pat-001",
+        "birthDate": "1975-03-14",
+        "gender": "female"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:enc-001",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "enc-001",
+        "status": "finished",
+        "class": {
+          "code": "AMB"
+        },
+        "type": [
+          {
+            "text": "General examination of patient"
+          }
+        ],
+        "subject": {
+          "reference": "urn:uuid:pat-001"
+        },
+        "period": {
+          "start": "2024-02-01T09:00:00Z",
+          "end": "2024-02-01T09:30:00Z"
+        },
+        "participant": [
+          {
+            "individual": {
+              "reference": "Practitioner/prov-001"
+            }
+          }
+        ],
+        "serviceProvider": {
+          "reference": "Organization/fac-001"
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:cond-001",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-001",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "code": "44054006",
+              "display": "Diabetes mellitus type 2"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "urn:uuid:pat-001"
+        },
+        "encounter": {
+          "reference": "urn:uuid:enc-001"
+        },
+        "onsetDateTime": "2024-02-01"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:claim-001",
+      "resource": {
+        "resourceType": "Claim",
+        "id": "claim-001"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:enc-002",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "enc-002",
+        "status": "finished",
+        "class": {
+          "code": "IMP"
+        },
+        "type": [
+          {
+            "text": "Inpatient admission for pneumonia"
+          }
+        ],
+        "subject": {
+          "reference": "urn:uuid:pat-001"
+        },
+        "period": {
+          "start": "2024-03-01T08:00:00Z",
+          "end": "2024-03-05T14:00:00Z"
+        },
+        "participant": [
+          {
+            "individual": {
+              "reference": "Practitioner/prov-001"
+            }
+          }
+        ],
+        "serviceProvider": {
+          "reference": "Organization/fac-001"
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:enc-003",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "enc-003",
+        "status": "finished",
+        "class": {
+          "code": "IMP"
+        },
+        "type": [
+          {
+            "text": "Inpatient readmission for pneumonia complication"
+          }
+        ],
+        "subject": {
+          "reference": "urn:uuid:pat-001"
+        },
+        "period": {
+          "start": "2024-03-20T10:00:00Z",
+          "end": "2024-03-23T16:00:00Z"
+        },
+        "participant": [
+          {
+            "individual": {
+              "reference": "Practitioner/prov-001"
+            }
+          }
+        ],
+        "serviceProvider": {
+          "reference": "Organization/fac-001"
+        }
+      }
+    }
+  ]
+}
