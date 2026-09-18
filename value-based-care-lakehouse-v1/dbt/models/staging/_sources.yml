@@ -1,0 +1,142 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: >
+      Raw landed data from the ingestion scripts in /ingestion, one table
+      per output file. No business logic applied here - this is exactly
+      what land_nppes.py / land_de_synpuf.py / land_synthea.py wrote out.
+    schema: bronze
+    tables:
+      # --- NPPES ---
+      - name: nppes_providers
+        description: Individual providers (Entity Type 1) from NPPES, from ingestion/nppes/land_nppes.py
+        columns:
+          - name: npi
+            tests: [not_null]
+      - name: nppes_facilities
+        description: Organizations/facilities (Entity Type 2) from NPPES
+        columns:
+          - name: npi
+            tests: [not_null]
+
+      # --- DE-SynPUF ---
+      - name: synpuf_beneficiary_summary
+        description: One row per synthetic Medicare beneficiary per year, from ingestion/de_synpuf/land_de_synpuf.py
+        columns:
+          - name: member_bk
+            tests: [not_null]
+      - name: synpuf_inpatient_claim_header
+        description: One row per inpatient claim
+        columns:
+          - name: claim_line_bk
+            tests: [not_null]
+      - name: synpuf_inpatient_claim_diagnoses
+        description: Unpivoted diagnosis codes, one row per (claim, diagnosis)
+      - name: synpuf_inpatient_claim_procedures
+        description: Unpivoted procedure codes, one row per (claim, procedure)
+
+      # --- Synthea ---
+      - name: synthea_patients
+        description: FHIR Patient resources flattened, from ingestion/synthea/land_synthea.py
+        columns:
+          - name: member_bk
+            tests: [not_null]
+      - name: synthea_encounters
+        description: FHIR Encounter resources flattened
+      - name: synthea_conditions
+        description: FHIR Condition resources flattened
+
+      # --- Payment Integrity (real DRG/procedure from DE-SynPUF, rest synthetic - see ingestion/payment_integrity/README.md) ---
+      - name: synpuf_inpatient_claim_procedures
+        description: Unpivoted ICD-9 procedure codes from DE-SynPUF Inpatient Claims (standing in for HCPCS Level II - see README)
+      - name: pi_contracts
+        description: SYNTHETIC VBC contract fixtures - no open data source exists for this entity
+      - name: pi_provider_contracts
+        description: SYNTHETIC provider-to-contract attachment fixtures
+      - name: pi_authorizations
+        description: SYNTHETIC prior authorization fixtures
+      - name: pi_appeals
+        description: SYNTHETIC appeal case fixtures
+      - name: pi_payment_transactions
+        description: SYNTHETIC claim payment transaction fixtures
+      - name: pi_adjustment_transactions
+        description: SYNTHETIC claim adjustment transaction fixtures
+      - name: pi_cob_recovery_transactions
+        description: SYNTHETIC coordination-of-benefits recovery transaction fixtures
+
+      # --- Risk Adjustment (SYNTHETIC, except risk model versions and
+      # HCC category codes/descriptions which are real - see
+      # ingestion/risk_adjustment/README.md) ---
+      - name: ra_risk_models
+        description: Real CMS-HCC model versions (V24, V28), from ingestion/risk_adjustment/make_risk_adjustment_sample.py
+        columns:
+          - name: risk_model_bk
+            tests: [not_null]
+      - name: ra_hcc_categories
+        description: Real CMS-HCC V28 category codes/descriptions (representative subset); weight values are illustrative
+        columns:
+          - name: hcc_bk
+            tests: [not_null]
+      - name: ra_diagnosis_hcc_crosswalk
+        description: Illustrative sample diagnosis-to-HCC crosswalk, NOT the full CMS mapping table
+        columns:
+          - name: diagnosis_bk
+            tests: [not_null]
+      - name: ra_member_hcc
+        description: SYNTHETIC member-to-HCC assignment, now including coding-gap lifecycle fields (active_flag, coding_gap_identified_date, coding_gap_closed_date)
+        columns:
+          - name: member_bk
+            tests: [not_null]
+      - name: ra_suspected_hcc
+        description: SYNTHETIC "suspected" HCC fixture (what a clinical-evidence suspecting engine would flag) - feeds HCC Capture Rate and Suspecting Yield Rate; see ingestion/risk_adjustment/README.md
+        columns:
+          - name: member_bk
+            tests: [not_null]
+      - name: ra_member_risk_scores
+        description: SYNTHETIC member-level RAF scores by model year
+        columns:
+          - name: member_bk
+            tests: [not_null]
+
+      # --- Clinical Quality (real Synthea encounters/conditions above;
+      # measures and member-measure evaluations are SYNTHETIC except real
+      # CMS Star Ratings measure codes - see
+      # ingestion/clinical_quality/README.md) ---
+      - name: cq_measures
+        description: Real CMS Star Ratings measure codes/names (representative subset); weight values are illustrative
+        columns:
+          - name: measure_bk
+            tests: [not_null]
+      - name: cq_member_measure
+        description: SYNTHETIC member-to-measure eligibility assignment
+        columns:
+          - name: member_bk
+            tests: [not_null]
+      - name: cq_member_measure_evals
+        description: SYNTHETIC member-level measure evaluation results (met/not_met)
+        columns:
+          - name: member_bk
+            tests: [not_null]
+
+      # --- Pharmacy (real FDA NDC Directory for drugs; pharmacies
+      # filtered from real NPPES data; fill transactions SYNTHETIC - see
+      # ingestion/pharmacy/README.md) ---
+      - name: ndc_products
+        description: Real FDA NDC Directory product.txt - one row per listed drug product
+        columns:
+          - name: productndc
+            tests: [not_null]
+      - name: ndc_packages
+        description: Real FDA NDC Directory package.txt - one row per package configuration
+      - name: pharmacy_fills
+        description: SYNTHETIC prescription fill transactions (member + drug + pharmacy + fill_date)
+        columns:
+          - name: member_bk
+            tests: [not_null]
+
+      - name: drg_weights
+        description: Real CMS MS-DRG relative weights (illustrative subset covering DRGs 291/292/293/470) - see ingestion/payment_integrity/README.md
+        columns:
+          - name: drg_bk
+            tests: [not_null]
