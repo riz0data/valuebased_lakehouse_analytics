@@ -1,0 +1,71 @@
+# identity_policy.yaml
+#
+# Declares the agent's identity and exact scope as data, not scattered
+# across code comments - the single reviewable source of truth for
+# "what is this agent identity, and what is it allowed to touch."
+# See ADR-013 in docs/decisions/ADRs.md and README.md in this folder.
+#
+# This is a reference implementation - there is no live Unity Catalog
+# metastore attached to this portfolio project. This file documents
+# the identity and scope that create_agent_service_principal.sql grants
+# in practice; a real deployment would keep both in sync, ideally by
+# generating the SQL from this file rather than maintaining both by hand.
+
+identity:
+  name: svc-agent-semantic-layer
+  type: databricks_service_principal
+  description: >
+    Non-human Unity Catalog identity for the AI agent accessing this
+    project's dbt semantic layer. Distinct from any individual human
+    user - all agent-originated queries authenticate as this identity,
+    never as a human's personal login, so agent activity is
+    attributable and scoped independently of any person.
+  credential:
+    mechanism: oauth_short_lived_token
+    rotation: automatic (Databricks-managed, not a static secret)
+    note: >
+      Never a long-lived personal access token. A static, non-expiring
+      credential for a non-human identity is exactly the pattern real
+      2026 guidance flags as the highest-risk non-human-identity
+      failure mode - see ADR-013 sources.
+
+scope:
+  allowed:
+    - catalog: gold
+      schema: semantic
+      access: SELECT
+      note: The only access this identity needs, per ADR-006.
+  explicitly_denied:
+    - catalog: gold
+      schema: "*"
+      note: >
+        No access to any other gold schema (e.g. governance, raw fact
+        tables outside the semantic layer) beyond gold.semantic.
+    - catalog: staging
+      schema: "*"
+    - catalog: vault
+      schema: "*"
+      note: >
+        Staging and vault are raw/intermediate layers never meant to be
+        agent-queryable, per ADR-006's original semantic-layer-only
+        decision.
+
+governance_dependency:
+  note: >
+    The row filters and column masks in
+    dbt/models/gold/governance_policies.sql (ADR-007) apply to whichever
+    identity is asking. This identity policy is what gives those
+    policies a specific, distinct subject to apply to for agent
+    traffic - without it, agent queries and human queries running under
+    a shared identity are indistinguishable to Unity Catalog, and a
+    policy meant to apply differently to agents cannot actually be
+    expressed.
+
+audit_dependency:
+  note: >
+    observability/mcp_audit_logger.py already logs a caller_identity
+    field per event. Once this service principal exists,
+    caller_identity should be populated with this identity's name for
+    every agent-originated call, making agent activity distinguishable
+    from human activity in the audit log for the first time - see
+    ADR-013 consequences.

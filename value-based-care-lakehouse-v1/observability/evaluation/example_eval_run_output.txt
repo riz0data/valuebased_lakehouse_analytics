@@ -1,0 +1,34 @@
+Ran 28 golden test cases against the simulated agent.
+
+[PASS] golden_total_payment_leakage: expected='total_payment_leakage' actual='total_payment_leakage' rubric=1.0
+[PASS] golden_payment_leakage_rate: expected='payment_leakage_rate' actual='payment_leakage_rate' rubric=1.0
+[PASS] golden_leakage_by_provider: expected='leakage_by_provider' actual='leakage_by_provider' rubric=1.0
+[PASS] golden_denial_rate: expected='denial_rate' actual='denial_rate' rubric=1.0
+[PASS] golden_days_to_adjudication: expected='days_to_adjudication' actual='days_to_adjudication' rubric=1.0
+[PASS] golden_yoy_leakage_trend: expected='yoy_leakage_trend' actual='yoy_leakage_trend' rubric=1.0
+[PASS] golden_raf_score: expected='raf_score' actual='raf_score' rubric=1.0
+[PASS] golden_yoy_raf_score_trend: expected='yoy_raf_score_trend' actual='yoy_raf_score_trend' rubric=1.0
+[PASS] golden_hedis_style_measure_compliance_rate: expected='hedis_style_measure_compliance_rate' actual='hedis_style_measure_compliance_rate' rubric=1.0
+[PASS] golden_star_rating_composite_score: expected='star_rating_composite_score' actual='star_rating_composite_score' rubric=1.0
+[PASS] golden_ed_encounters: expected='ed_encounters' actual='ed_encounters' rubric=1.0
+[PASS] golden_distinct_members: expected='distinct_members' actual='distinct_members' rubric=1.0
+[PASS] golden_ed_utilization_rate: expected='ed_utilization_rate' actual='ed_utilization_rate' rubric=1.0
+[PASS] golden_medication_adherence_pdc: expected='medication_adherence_pdc' actual='medication_adherence_pdc' rubric=1.0
+[PASS] golden_drg_reimbursement_variance: expected='drg_reimbursement_variance' actual='drg_reimbursement_variance' rubric=1.0
+[PASS] golden_cob_tpl_recovery_amount: expected='cob_tpl_recovery_amount' actual='cob_tpl_recovery_amount' rubric=1.0
+[PASS] golden_prior_authorization_approval_rate: expected='prior_authorization_approval_rate' actual='prior_authorization_approval_rate' rubric=1.0
+[PASS] golden_appeal_overturn_rate: expected='appeal_overturn_rate' actual='appeal_overturn_rate' rubric=1.0
+[PASS] golden_hcc_capture_rate: expected='hcc_capture_rate' actual='hcc_capture_rate' rubric=1.0
+[PASS] golden_coding_gap_closure_rate: expected='coding_gap_closure_rate' actual='coding_gap_closure_rate' rubric=1.0
+[PASS] golden_risk_score_accuracy: expected='risk_score_accuracy' actual='risk_score_accuracy' rubric=1.0
+[PASS] golden_suspecting_yield_rate: expected='suspecting_yield_rate' actual='suspecting_yield_rate' rubric=1.0
+[PASS] golden_member_risk_tier_distribution: expected='member_risk_tier_distribution' actual='member_risk_tier_distribution' rubric=1.0
+[PASS] golden_readmission_rate: expected='readmission_rate' actual='readmission_rate' rubric=1.0
+[PASS] golden_preventive_screening_completion_rate: expected='preventive_screening_completion_rate' actual='preventive_screening_completion_rate' rubric=1.0
+[PASS] golden_care_gap_count: expected='care_gap_count' actual='care_gap_count' rubric=1.0
+[PASS] golden_no_match_mlr: expected=None actual=None rubric=1.0
+[FAIL] golden_ambiguous_phrasing: expected='ed_utilization_rate' actual=None rubric=0.0
+       -> Failed to resolve any metric; expected 'ed_utilization_rate'.
+
+Pass rate: 96% (27/28)
+Average rubric score: 0.96

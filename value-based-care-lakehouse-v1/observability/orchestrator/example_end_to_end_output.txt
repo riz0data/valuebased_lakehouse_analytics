@@ -1,0 +1,38 @@
+SCENARIO 1: a normal question, full successful path through every layer.
+
+======================================================================
+New request | session=a0e63e06-47f1-4b43-aa57-e6ff364a2623 | identity=svc-agent-semantic-layer
+======================================================================
+[1. Identity] tagged: Request tagged with agent identity 'svc-agent-semantic-layer' (ADR-013), not a human credential.
+[2. Guardrails (pre-call)] ALLOWED: No injection or sensitive-data patterns detected.
+[3. AI Gateway] ALLOWED: Routed to provider-a-small; budget and content policy cleared.
+[3. AI Gateway] booked: Model call cost booked: 0.00066 dollars.
+[4. Orchestration] delegated: Sub-agent 'svc-agent-semantic-layer-subtask-lookup' granted parent's own scope, nothing more.
+[5. MCP / Semantic layer] ALLOWED: Tool call scoped to gold.semantic only (ADR-006); requesting 'payment_leakage_rate'.
+[6. Human-in-the-loop] auto_approved: Tier 1 read-only lookup auto-approved, no human needed.
+[7. Query execution] success: gold.semantic returned payment_leakage_rate = 3.2 percent for Q2 2026 (Unity Catalog row filters/column masks per ADR-007 apply automatically, not modeled here).
+[8. Guardrails (post-call)] ALLOWED: 'payment_leakage_rate' is a real, governed metric.
+[9. Audit + cost logging] recorded: Session a0e63e06-47f1-4b43-aa57-e6ff364a2623 logged with identity, all 9 hops, and gateway cost 0.00066 dollars (mirrors mcp_audit_logger.ToolCallEvent and finops/agent_cost_tracker.py's per-feature rollup).
+[10. Summary] returned: Payment Leakage Rate for Q2 2026 was 3.2 percent.
+
+Final summary returned to user: Payment Leakage Rate for Q2 2026 was 3.2 percent.
+
+
+SCENARIO 2: a question containing a prompt-injection attempt, halted at guardrails.
+
+======================================================================
+New request | session=f3962189-c187-4dc4-8cc7-981c5ca60cc0 | identity=svc-agent-semantic-layer
+======================================================================
+[1. Identity] tagged: Request tagged with agent identity 'svc-agent-semantic-layer' (ADR-013), not a human credential.
+[2. Guardrails (pre-call)] BLOCKED: Suspected prompt injection: matched pattern 'ignore (all|any|the)? ?(previous|prior|above) instructions'.
+
+Run correctly halted: Halted at guardrails: Suspected prompt injection: matched pattern 'ignore (all|any|the)? ?(previous|prior|above) instructions'.
+
+
+SCENARIO 3: a hypothetical higher-risk action halted pending human approval.
+(Every real tool in this project is Tier 1 read-only per ADR-006, so this
+ calls the approval gate directly with a Tier 3 action to demonstrate the halt.)
+[APPROVAL NEEDED - tier_3] To: governance-alerts@example.com | Action: 'Hypothetical: re-run a full gold-layer reconciliation job' requested by agent:svc-agent-semantic-layer | SLA: 60 minutes | Request ID: 2b27df6a-2763-499e-a551-c34fd845e5d7
+
+Run correctly halted: request 2b27df6a-2763-499e-a551-c34fd845e5d7 is PENDING human approval, SLA 60 minutes. No action executes until a human calls resolve_request().
+

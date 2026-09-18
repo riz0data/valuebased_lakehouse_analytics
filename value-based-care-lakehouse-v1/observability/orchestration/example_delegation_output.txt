@@ -1,0 +1,13 @@
+Top-level agent identity: svc-agent-semantic-layer
+Top-level scope: [('gold', 'semantic', 'SELECT')]
+
+Scenario 1: sub-agent requests exactly the parent's own scope, nothing more.
+  Delegation granted: svc-agent-semantic-layer-subtask-metric-lookup (token 36972449-13ec-4795-b33e-0b97633a7de5)
+
+Scenario 2: sub-agent requests access the parent does not have (write access to gold.governance).
+  Delegation refused, as required: Delegation refused: 'svc-agent-semantic-layer-subtask-rogue' requested permissions the parent 'svc-agent-semantic-layer' does not hold: frozenset({('gold', 'governance', 'MODIFY')}). A sub-agent can only ever receive a subset of its parent's scope.
+
+Scenario 3: a two-hop delegation chain, traced back to the original identity.
+  Chain length: 2 hops
+    hop 0: svc-agent-semantic-layer -> svc-agent-semantic-layer-subtask-metric-lookup (Look up Medical Loss Ratio for the current quarter)
+    hop 1: svc-agent-semantic-layer-subtask-metric-lookup -> svc-agent-semantic-layer-subtask-metric-lookup-formatter (Format the Medical Loss Ratio result for the user)

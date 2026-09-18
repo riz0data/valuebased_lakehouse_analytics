@@ -1,0 +1,12 @@
+Governance registry drift check: docs/governance/registry/governance_registry.xlsx
+  6 rule(s) confirmed consistent between registry and code.
+  0 drift finding(s).
+
+  OK  [AR-001] Documented rule 'gold.governance.provider_region_filter' on 'gold.gold.dim_provider' confirmed present in governance_policies.sql.
+  OK  [AR-002] Documented as a known gap ('Row Filter Gap'), not checked against code - as intended.
+  OK  [AR-003] Documented rule 'gold.governance.mask_birth_date' on 'gold.gold.dim_member' confirmed present in governance_policies.sql.
+  OK  [AR-004] Documented rule 'gold.governance.mask_race_code' on 'gold.gold.dim_member' confirmed present in governance_policies.sql.
+  OK  [AR-005] Documented rule 'gold.governance.mask_provider_name' on 'gold.gold.dim_provider' confirmed present in governance_policies.sql.
+  OK  [AR-006] Documented as a known gap ('Semantic-Layer-Only Rule'), not checked against code - as intended.
+
+PASSED: registry and code are consistent.

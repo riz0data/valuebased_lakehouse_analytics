@@ -1,0 +1,24 @@
+Simulated session: 1bb8a56d-35f1-4642-850f-36dd37efa812
+Total agent calls logged: 10
+
+Per-call cost detail:
+  [metric_lookup     ] claude-sonnet-5  in=  420 out=  180 cost=$0.003960
+  [metric_lookup     ] claude-sonnet-5  in=  380 out=  150 cost=$0.003390
+  [metric_lookup     ] claude-haiku-5   in=  410 out=  140 cost=$0.000888
+  [nl_to_metric_query] claude-sonnet-5  in=  950 out=  420 cost=$0.009150
+  [nl_to_metric_query] claude-sonnet-5  in= 1100 out=  510 cost=$0.010950
+  [governance_qna    ] claude-sonnet-5  in= 1800 out=  900 cost=$0.018900
+  [governance_qna    ] claude-haiku-5   in= 1650 out=  800 cost=$0.004520
+  [metric_lookup     ] claude-sonnet-5  in=  400 out=  160 cost=$0.003600
+  [nl_to_metric_query] claude-haiku-5   in=  980 out=  400 cost=$0.002384
+  [governance_qna    ] claude-sonnet-5  in= 2100 out= 1050 cost=$0.022050
+
+Total simulated spend across all calls: $0.0798
+
+Daily cost by feature (chargeback view):
+  governance_qna     claude-sonnet-5  in_tokens=  3900 out_tokens=  1950 cost=$0.0410
+  nl_to_metric_query claude-sonnet-5  in_tokens=  2050 out_tokens=   930 cost=$0.0201
+  metric_lookup      claude-sonnet-5  in_tokens=  1200 out_tokens=   490 cost=$0.0109
+  governance_qna     claude-haiku-5   in_tokens=  1650 out_tokens=   800 cost=$0.0045
+  nl_to_metric_query claude-haiku-5   in_tokens=   980 out_tokens=   400 cost=$0.0024
+  metric_lookup      claude-haiku-5   in_tokens=   410 out_tokens=   140 cost=$0.0009

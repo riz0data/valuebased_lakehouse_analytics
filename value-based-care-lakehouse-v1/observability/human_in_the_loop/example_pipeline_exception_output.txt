@@ -1,0 +1,13 @@
+Simulating four pipeline failures across all severity tiers.
+
+  [LOW   ] staging.stg_claims (test_failure) -> logged only, no page
+
+[PIPELINE EXCEPTION - medium] To: governance-alerts@example.com | Pipeline: dbt_run | Target: vault.sat_provider_details | test_failure: 8 rows failed a freshness test on load_date | Exception ID: 4b440af8-586f-45a2-9cd7-8d83a4abc0dc
+  [MEDIUM] vault.sat_provider_details (test_failure) -> human notified
+
+[PIPELINE EXCEPTION - URGENT - high] To: governance-alerts@example.com | Pipeline: vault_load | Target: vault.sat_provider_details | load_error: Satellite load partially failed - 3 of 400 batches errored | Exception ID: d8ba186f-d603-4bc3-be7b-06f8a6627bb4
+  [HIGH  ] vault.sat_provider_details (load_error) -> human notified
+
+[PIPELINE EXCEPTION - URGENT - high] To: governance-alerts@example.com | Pipeline: dbt_run | Target: gold.fact_claim_payment | test_failure: relationships test failed - 40 rows reference a missing provider_key | Exception ID: c87dbd45-d55e-45c3-8c8a-229e1a76bab6
+  [HIGH  ] gold.fact_claim_payment (test_failure) -> human notified
+

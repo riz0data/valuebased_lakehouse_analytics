@@ -1,0 +1,26 @@
+Simulating four agent actions across all four risk tiers.
+
+  [tier_1] 'Look up Medical Loss Ratio for Q3'
+      -> PROCEEDS IMMEDIATELY
+
+  [tier_2] 'Write a cached result to the agent's own scratch table'
+      -> PROCEEDS IMMEDIATELY
+
+[APPROVAL NEEDED - tier_3] To: governance-alerts@example.com | Action: 'Trigger a re-run of the Gold-layer dbt build' requested by agent:claude-desktop/rizwan | SLA: 60 minutes | Request ID: 6d0c1c22-5f24-42c2-b976-22716318234c
+  [tier_3] 'Trigger a re-run of the Gold-layer dbt build'
+      -> BLOCKED - awaiting human approval
+
+[APPROVAL NEEDED - URGENT - tier_4] To: governance-alerts@example.com | Action: 'Modify a governance_policies.sql row filter definition' requested by agent:claude-desktop/rizwan | SLA: 15 minutes | Request ID: ac9a1da2-c8b3-4b52-8c3e-d70f56241cfb
+  [tier_4] 'Modify a governance_policies.sql row filter definition'
+      -> BLOCKED - awaiting human approval
+
+Pending requests awaiting a human right now: 2
+  - 6d0c1c22-5f24-42c2-b976-22716318234c : Trigger a re-run of the Gold-layer dbt build (SLA 60 min)
+  - ac9a1da2-c8b3-4b52-8c3e-d70f56241cfb : Modify a governance_policies.sql row filter definition (SLA 15 min)
+
+Simulating a human approving the Tier 3 request and denying the Tier 4 request...
+
+  Tier 3 request resolved: approved -> pipeline may now proceed.
+  Tier 4 request resolved: denied -> action permanently blocked.
+
+Pending requests remaining: 0

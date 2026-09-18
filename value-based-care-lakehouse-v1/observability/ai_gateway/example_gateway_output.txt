@@ -1,0 +1,11 @@
+Scenario 1: a normal, allowed request through the gateway.
+  Allowed. provider=provider-a-small cost_usd=0.00054
+
+Scenario 2: a request that trips the content policy and is refused.
+  Refused, as required: Request blocked by gateway content policy: contains disallowed pattern 'patient full name and dob'.
+
+Scenario 3: repeated calls that exceed the feature's daily budget (metric-lookup is capped at 2.00 dollars per day).
+  Refused after 1 feature(s) tracked, as required: Request refused: feature 'metric-lookup' has spent 1.9955 of its 2.00 daily budget; this call would add 0.0150 and exceed it.
+
+Spend booked so far, by feature:
+  metric-lookup: 1.9955 dollars

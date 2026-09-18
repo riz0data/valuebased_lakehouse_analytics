@@ -1,0 +1,200 @@
+[
+  {
+    "case_id": "golden_total_payment_leakage",
+    "question": "What's our leakage looking like?",
+    "expected_metric": "total_payment_leakage",
+    "expected_domain": "payment_integrity",
+    "matched_via_synonym": "leakage"
+  },
+  {
+    "case_id": "golden_payment_leakage_rate",
+    "question": "What's our leakage rate looking like?",
+    "expected_metric": "payment_leakage_rate",
+    "expected_domain": "payment_integrity",
+    "matched_via_synonym": "leakage rate"
+  },
+  {
+    "case_id": "golden_leakage_by_provider",
+    "question": "What's our provider leakage looking like?",
+    "expected_metric": "leakage_by_provider",
+    "expected_domain": "payment_integrity",
+    "matched_via_synonym": "provider leakage"
+  },
+  {
+    "case_id": "golden_denial_rate",
+    "question": "What's our claim denial rate looking like?",
+    "expected_metric": "denial_rate",
+    "expected_domain": "payment_integrity",
+    "matched_via_synonym": "claim denial rate"
+  },
+  {
+    "case_id": "golden_days_to_adjudication",
+    "question": "What's our adjudication turnaround looking like?",
+    "expected_metric": "days_to_adjudication",
+    "expected_domain": "payment_integrity",
+    "matched_via_synonym": "adjudication turnaround"
+  },
+  {
+    "case_id": "golden_yoy_leakage_trend",
+    "question": "What's our leakage trend looking like?",
+    "expected_metric": "yoy_leakage_trend",
+    "expected_domain": "payment_integrity",
+    "matched_via_synonym": "leakage trend"
+  },
+  {
+    "case_id": "golden_raf_score",
+    "question": "What's our risk score looking like?",
+    "expected_metric": "raf_score",
+    "expected_domain": "risk_adjustment",
+    "matched_via_synonym": "risk score"
+  },
+  {
+    "case_id": "golden_yoy_raf_score_trend",
+    "question": "What's our risk score trend looking like?",
+    "expected_metric": "yoy_raf_score_trend",
+    "expected_domain": "risk_adjustment",
+    "matched_via_synonym": "risk score trend"
+  },
+  {
+    "case_id": "golden_hedis_style_measure_compliance_rate",
+    "question": "What's our HEDIS compliance looking like?",
+    "expected_metric": "hedis_style_measure_compliance_rate",
+    "expected_domain": "clinical_quality",
+    "matched_via_synonym": "HEDIS compliance"
+  },
+  {
+    "case_id": "golden_star_rating_composite_score",
+    "question": "What's our star rating looking like?",
+    "expected_metric": "star_rating_composite_score",
+    "expected_domain": "clinical_quality",
+    "matched_via_synonym": "star rating"
+  },
+  {
+    "case_id": "golden_ed_encounters",
+    "question": "What's our ER visits looking like?",
+    "expected_metric": "ed_encounters",
+    "expected_domain": "clinical_quality",
+    "matched_via_synonym": "ER visits"
+  },
+  {
+    "case_id": "golden_distinct_members",
+    "question": "What's our member population looking like?",
+    "expected_metric": "distinct_members",
+    "expected_domain": "clinical_quality",
+    "matched_via_synonym": "member population"
+  },
+  {
+    "case_id": "golden_ed_utilization_rate",
+    "question": "What's our ER utilization looking like?",
+    "expected_metric": "ed_utilization_rate",
+    "expected_domain": "clinical_quality",
+    "matched_via_synonym": "ER utilization"
+  },
+  {
+    "case_id": "golden_medication_adherence_pdc",
+    "question": "What's our PDC looking like?",
+    "expected_metric": "medication_adherence_pdc",
+    "expected_domain": "pharmacy",
+    "matched_via_synonym": "PDC"
+  },
+  {
+    "case_id": "golden_drg_reimbursement_variance",
+    "question": "What's our DRG variance looking like?",
+    "expected_metric": "drg_reimbursement_variance",
+    "expected_domain": "payment_integrity",
+    "matched_via_synonym": "DRG variance"
+  },
+  {
+    "case_id": "golden_cob_tpl_recovery_amount",
+    "question": "What's our COB recovery looking like?",
+    "expected_metric": "cob_tpl_recovery_amount",
+    "expected_domain": "payment_integrity",
+    "matched_via_synonym": "COB recovery"
+  },
+  {
+    "case_id": "golden_prior_authorization_approval_rate",
+    "question": "What's our prior auth approval rate looking like?",
+    "expected_metric": "prior_authorization_approval_rate",
+    "expected_domain": "payment_integrity",
+    "matched_via_synonym": "prior auth approval rate"
+  },
+  {
+    "case_id": "golden_appeal_overturn_rate",
+    "question": "What's our appeal success rate looking like?",
+    "expected_metric": "appeal_overturn_rate",
+    "expected_domain": "payment_integrity",
+    "matched_via_synonym": "appeal success rate"
+  },
+  {
+    "case_id": "golden_hcc_capture_rate",
+    "question": "What's our HCC capture looking like?",
+    "expected_metric": "hcc_capture_rate",
+    "expected_domain": "risk_adjustment",
+    "matched_via_synonym": "HCC capture"
+  },
+  {
+    "case_id": "golden_coding_gap_closure_rate",
+    "question": "What's our coding gap closure looking like?",
+    "expected_metric": "coding_gap_closure_rate",
+    "expected_domain": "risk_adjustment",
+    "matched_via_synonym": "coding gap closure"
+  },
+  {
+    "case_id": "golden_risk_score_accuracy",
+    "question": "What's our RAF accuracy looking like?",
+    "expected_metric": "risk_score_accuracy",
+    "expected_domain": "risk_adjustment",
+    "matched_via_synonym": "RAF accuracy"
+  },
+  {
+    "case_id": "golden_suspecting_yield_rate",
+    "question": "What's our suspecting yield looking like?",
+    "expected_metric": "suspecting_yield_rate",
+    "expected_domain": "risk_adjustment",
+    "matched_via_synonym": "suspecting yield"
+  },
+  {
+    "case_id": "golden_member_risk_tier_distribution",
+    "question": "What's our risk tier breakdown looking like?",
+    "expected_metric": "member_risk_tier_distribution",
+    "expected_domain": "risk_adjustment",
+    "matched_via_synonym": "risk tier breakdown"
+  },
+  {
+    "case_id": "golden_readmission_rate",
+    "question": "What's our 30-day readmission rate looking like?",
+    "expected_metric": "readmission_rate",
+    "expected_domain": "clinical_quality",
+    "matched_via_synonym": "30-day readmission rate"
+  },
+  {
+    "case_id": "golden_preventive_screening_completion_rate",
+    "question": "What's our screening completion rate looking like?",
+    "expected_metric": "preventive_screening_completion_rate",
+    "expected_domain": "clinical_quality",
+    "matched_via_synonym": "screening completion rate"
+  },
+  {
+    "case_id": "golden_care_gap_count",
+    "question": "What's our open care gaps looking like?",
+    "expected_metric": "care_gap_count",
+    "expected_domain": "clinical_quality",
+    "matched_via_synonym": "open care gaps"
+  },
+  {
+    "case_id": "golden_no_match_mlr",
+    "question": "What's our medical loss ratio been running at?",
+    "expected_metric": null,
+    "expected_domain": null,
+    "matched_via_synonym": null,
+    "note": "Medical Loss Ratio is a documented Data Gap - correct behavior is no match, not a guess."
+  },
+  {
+    "case_id": "golden_ambiguous_phrasing",
+    "question": "How many people are in our ER right now this year versus last?",
+    "expected_metric": "ed_utilization_rate",
+    "expected_domain": "clinical_quality",
+    "matched_via_synonym": "ER utilization",
+    "note": "Deliberately loose phrasing that should still resolve to ED utilization, not the raw ed_encounters helper metric."
+  }
+]

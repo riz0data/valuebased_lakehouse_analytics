@@ -1,0 +1,25 @@
+Example output: lakehouse_cost_attribution.sql
+(Illustrative result set - no live Databricks workspace is attached to
+this portfolio project, so this is a hand-built example of the shape
+and scale of output the query produces, not a captured real run. Column
+names and structure match the query in lakehouse_cost_attribution.sql
+exactly.)
+
+usage_date  | project              | team          | environment | sku_name          | total_dbus | total_cost_dollars
+------------|----------------------|---------------|-------------|-------------------|------------|--------------------
+2026-09-16  | vbc-lakehouse        | data-eng      | prod        | JOBS_COMPUTE       | 142.30     | 356.25
+2026-09-16  | vbc-lakehouse        | data-eng      | prod        | SQL_WAREHOUSE      | 88.10      | 220.25
+2026-09-16  | vbc-lakehouse        | analytics     | dev         | ALL_PURPOSE_COMPUTE| 34.50      | 103.50
+2026-09-16  | untagged             | untagged      | untagged    | JOBS_COMPUTE       | 12.80      | 32.00
+2026-09-15  | vbc-lakehouse        | data-eng      | prod        | JOBS_COMPUTE       | 139.90     | 349.75
+2026-09-15  | vbc-lakehouse        | data-eng      | prod        | SQL_WAREHOUSE      | 91.40      | 228.50
+
+Untagged spend query (the one a real FinOps review runs first):
+
+usage_date  | sku_name      | untagged_cost_dollars
+------------|---------------|-----------------------
+2026-09-16  | JOBS_COMPUTE  | 32.00
+
+This is exactly the number a real review would chase down first, since
+32 dollars of untagged spend cannot be charged back to any project or
+team until someone adds the missing tag at the cluster or job level.
