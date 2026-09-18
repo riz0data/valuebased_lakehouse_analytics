@@ -89,3 +89,44 @@ Satellites for those Hubs not yet built (`dim_facility`,
 `dim_diagnosis`). See `docs/data-vault-model-reference.xlsx` (Gold
 Mapping sheet) for the full 15-table target and each one's Vault
 source.
+
+
+## Access Governance: Row Filters and Column Masks
+
+`governance_policies.sql` in this folder registers Unity Catalog row
+filters and column masks on top of the Gold tables above - see ADR-007
+in `docs/decisions/ADRs.md` for the full reasoning. It is a plain SQL
+script, not a dbt model: it produces no table and isn't part of the
+`dbt build` DAG, and is run once against a real Databricks workspace
+after these Gold tables already exist.
+
+What's governed today:
+
+- `dim_provider` has a row filter keyed on `practice_state`, so a
+  regional manager's Unity Catalog group membership determines which
+  providers' rows they can see. Anyone outside a recognized regional
+  group sees every row.
+- `dim_member.birth_date` and `dim_member.race_code` are column-masked
+  for anyone outside the `phi_reviewers` group - birth date generalizes
+  to birth year, race code is withheld entirely.
+- `dim_provider.provider_first_name` and `provider_last_name` are
+  masked to an initial for anyone outside the `credentialing_team`
+  group, since every metric in this repo groups provider performance by
+  NPI or provider key, never by name.
+
+**Known gap:** table-level row filters and column masks don't follow
+joins. `fact_claim_payment` carries `provider_hk` but not
+`practice_state`, so the regional filter on `dim_provider` does not
+automatically restrict `fact_claim_payment` rows when queried directly
+or through the Semantic Layer's metrics built on it (for example,
+`total_payment_leakage`, `leakage_by_provider`). Closing this gap would
+mean either denormalizing `practice_state` onto the fact table so the
+same filter function can bind there too, or moving to a join-aware
+ABAC policy - neither is implemented here. This is called out
+explicitly rather than left as a silent assumption that every Gold
+table is regionally governed.
+
+This also underpins the AI-readiness work in `../semantic/README.md`
+(ADR-006): an AI agent querying governed metrics through the Semantic
+Layer inherits whatever row and column security is applied here
+automatically, with no separate "AI access" policy to define.

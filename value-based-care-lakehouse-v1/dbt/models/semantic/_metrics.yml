@@ -2,294 +2,418 @@ version: 2
 
 # Business-facing metric definitions, built on the measures declared in
 # _semantic_models.yml. These are what a BI tool, the dbt Semantic Layer
-# API, or a hiring manager skimming this repo should actually look at -
-# this file is the direct answer to "how does the data infrastructure
-# actually produce the numbers the business cares about."
+# API, an AI agent querying through the dbt MCP server, or a hiring
+# manager skimming this repo should actually look at - this file is the
+# direct answer to "how does the data infrastructure actually produce
+# the numbers the business cares about."
 #
-# Scope note: these six metrics are exactly the ones marked "Ready
-# Today" for the domains currently built (Core + Payment Integrity) in
-# docs/data-vault-model-reference.xlsx (Metrics sheet). The remaining
-# ~24 metrics in that sheet require Risk Adjustment, Clinical Quality,
-# and Pharmacy Vault models that are not yet built - seeing them marked
-# "Requires Build-Out" there rather than fabricated here is intentional.
+# Status: 24 business-facing metrics implemented (plus 2 intermediate
+# helper metrics, ed_encounters and distinct_members, that only exist to
+# feed the ed_utilization_rate derived metric) - every Payment
+# Integrity, Risk Adjustment, and Clinical Quality metric in the spec,
+# plus Medication Adherence (PDC) from Pharmacy. See
+# dbt/models/semantic/README.md for the full domain-by-domain breakdown.
+#
+# AI-readiness note: every metric below carries a `meta` block -
+# `domain`, `unit`, `synonyms`, and `data_maturity` - so an AI agent
+# querying through the dbt MCP server (or any other Semantic Layer
+# consumer) can disambiguate which metric a loosely-phrased question
+# maps to without guessing at a raw SQL join. `data_maturity` flags
+# whether the underlying data is real (`real_data`) or a labeled
+# synthetic fixture (`synthetic`) - see each domain's ingestion
+# README for what that means concretely for that metric.
 
 metrics:
-
-  - name: total_payment_leakage
-    description: "Sum of billed minus allowed minus paid across claim payment transactions - the core Payment Integrity dollar metric."
-    label: "Total Payment Leakage"
-    type: simple
-    type_params:
-      measure: total_leakage_amount
-
-  - name: payment_leakage_rate
-    description: "Total leakage as a percent of total billed amount."
-    label: "Payment Leakage Rate"
-    type: ratio
-    type_params:
-      numerator: total_leakage_amount
-      denominator: total_billed_amount
-
-  - name: leakage_by_provider
-    description: >
-      Total Payment Leakage, intended to be grouped by the provider
-      dimension at query time (e.g. `dbt sl query --metrics
-      leakage_by_provider --group-by provider`) - this is the same
-      underlying metric as total_payment_leakage, exposed under its own
-      business name per the Metrics sheet since "Leakage by Provider" is
-      how stakeholders ask for it.
-    label: "Leakage by Provider"
-    type: simple
-    type_params:
-      measure: total_leakage_amount
-
-  - name: denial_rate
-    description: "Percent of claim adjustments that are reason-coded as denials (CO-* contractual obligation codes), out of all adjustment transactions."
-    label: "Denial Rate"
-    type: ratio
-    type_params:
-      numerator: denial_count
-      denominator: adjustment_count
-
-  - name: days_to_adjudication
-    description: "Average days between service date and payment transaction date."
-    label: "Days to Adjudication"
-    type: simple
-    type_params:
-      measure: days_to_adjudication
-
-  - name: yoy_leakage_trend
-    description: >
-      Year-over-year change in Total Payment Leakage. Computed as a
-      derived metric offsetting total_payment_leakage by one year on the
-      payment_date time dimension, so it can be queried directly as
-      "this year vs last year" without a separate model.
-    label: "YoY Leakage Trend"
-    type: derived
-    type_params:
-      expr: "current_year_leakage - prior_year_leakage"
-      metrics:
-        - name: total_payment_leakage
-          alias: current_year_leakage
-        - name: total_payment_leakage
-          alias: prior_year_leakage
-          offset_window: 1 year
-
-  - name: raf_score
-    description: "Average CMS-HCC risk adjustment factor (RAF) score per member, for the current model year."
-    label: "RAF Score"
-    type: simple
-    type_params:
-      measure: average_raf_score
-
-  - name: yoy_raf_score_trend
-    description: >
-      Year-over-year change in average RAF Score. Derived metric
-      offsetting raf_score by one year on the effective_from time
-      dimension, mirroring the yoy_leakage_trend pattern above.
-    label: "YoY RAF Score Trend"
-    type: derived
-    type_params:
-      expr: "current_year_raf - prior_year_raf"
-      metrics:
-        - name: raf_score
-          alias: current_year_raf
-        - name: raf_score
-          alias: prior_year_raf
-          offset_window: 1 year
-
-  - name: hedis_style_measure_compliance_rate
-    description: "Percent of eligible members meeting a given quality measure, out of all evaluations. SYNTHETIC eval results - see ingestion/clinical_quality/README.md."
-    label: "HEDIS-style Measure Compliance Rate"
-    type: ratio
-    type_params:
-      numerator: met_count
-      denominator: evaluation_count
-
-  - name: star_rating_composite_score
-    description: >
-      Weighted composite across all CMS Star Ratings measures: sum of
-      measure_weight for measures met, divided by total possible
-      measure_weight. Real CMS measure weighting concept; illustrative
-      weight values and SYNTHETIC eval results - see
-      ingestion/clinical_quality/README.md.
-    label: "Star Rating Composite Score"
-    type: ratio
-    type_params:
-      numerator: weighted_met_score
-      denominator: total_possible_weight
-
-  - name: ed_encounters
-    description: "Count of encounters specifically classed as emergency - the numerator input for ED Utilization Rate."
-    label: "ED Encounters"
-    type: simple
-    type_params:
-      measure: ed_encounter_count
-
-  - name: distinct_members
-    description: "Distinct members with at least one encounter - the population denominator input for ED Utilization Rate."
-    label: "Distinct Members with an Encounter"
-    type: simple
-    type_params:
-      measure: distinct_member_count
-
-  - name: ed_utilization_rate
-    description: >
-      Emergency department visits per thousand members. Computed as a
-      derived metric: (ED encounter count / distinct member count) *
-      1000. Real Synthea encounter data.
-    label: "ED Utilization Rate"
-    type: derived
-    type_params:
-      expr: "(ed_visits / member_count) * 1000"
-      metrics:
-        - name: ed_encounters
-          alias: ed_visits
-        - name: distinct_members
-          alias: member_count
-
-  - name: medication_adherence_pdc
-    description: >
-      Medication Adherence, measured as Proportion of Days Covered
-      (PDC): total days covered by fills, over total possible days in
-      the observation period. SYNTHETIC fill events; this is a
-      simplified days-supply-sum approximation of PDC, not a full
-      date-overlap calculation - see fact_medication_adherence.sql and
-      ingestion/pharmacy/README.md.
-    label: "Medication Adherence (PDC)"
-    type: ratio
-    type_params:
-      numerator: total_days_covered
-      denominator: total_possible_days
-
-  - name: drg_reimbursement_variance
-    description: >
-      Variance between expected and actual DRG-based reimbursement,
-      summed across claims. Real DRG relative weights on real DE-SynPUF
-      claims; "expected" payment is a population-benchmark
-      simplification, not a true CMS IPPS payment calculation - see
-      fact_drg_reimbursement_variance.sql and
-      ingestion/payment_integrity/README.md.
-    label: "DRG Reimbursement Variance"
-    type: simple
-    type_params:
-      measure: total_reimbursement_variance
-
-  - name: cob_tpl_recovery_amount
-    description: "Total dollars recovered via coordination-of-benefits transactions. SYNTHETIC - see ingestion/payment_integrity/README.md."
-    label: "COB / TPL Recovery Amount"
-    type: simple
-    type_params:
-      measure: total_recovery_amount
-
-  - name: prior_authorization_approval_rate
-    description: "Percent of prior authorizations approved vs. denied. SYNTHETIC - see ingestion/payment_integrity/README.md."
-    label: "Prior Authorization Approval Rate"
-    type: ratio
-    type_params:
-      numerator: authorization_approved_count
-      denominator: authorization_count
-
-  - name: appeal_overturn_rate
-    description: "Percent of appeals that overturn the original claim decision. SYNTHETIC - see ingestion/payment_integrity/README.md."
-    label: "Appeal Overturn Rate"
-    type: ratio
-    type_params:
-      numerator: appeal_overturned_count
-      denominator: appeal_count
-
-  - name: hcc_capture_rate
-    description: >
-      Percent of expected/suspected HCC categories that are actually
-      captured/coded for a member. SYNTHETIC suspected and captured HCC
-      fixtures (not derived from real diagnosis data - this repo's real
-      diagnosis codes are ICD-9-CM/SNOMED, while the CMS-HCC crosswalk is
-      ICD-10-CM only) - see ingestion/risk_adjustment/README.md.
-    label: "HCC Capture Rate"
-    type: ratio
-    type_params:
-      numerator: captured_and_suspected_count
-      denominator: suspected_hcc_count
-
-  - name: coding_gap_closure_rate
-    description: "Percent of identified coding gaps subsequently closed. SYNTHETIC - see ingestion/risk_adjustment/README.md."
-    label: "Coding Gap Closure Rate"
-    type: ratio
-    type_params:
-      numerator: coding_gap_closed_count
-      denominator: coding_gap_identified_count
-
-  - name: risk_score_accuracy
-    description: >
-      Comparison of a member's actual (coded) RAF score against a
-      clinically-suspected RAF approximation, expressed as actual over
-      suspected. A ratio near 1.0 suggests coding and clinical suspicion
-      are aligned; well under 1.0 suggests under-coding. SYNTHETIC, and a
-      simplified HCC-weight-sum approximation, not a true CMS-HCC
-      calculation - see fact_risk_score_accuracy.sql.
-    label: "Risk Score Accuracy"
-    type: ratio
-    type_params:
-      numerator: total_actual_raf
-      denominator: total_suspected_raf_approx
-
-  - name: suspecting_yield_rate
-    description: >
-      Percent of suspected conditions confirmed through coding - the
-      same underlying comparison as HCC Capture Rate, exposed under its
-      own metric name to match how a Risk Adjustment stakeholder asks
-      for it ("of what we suspected, how much did we confirm"). SYNTHETIC
-      - see ingestion/risk_adjustment/README.md.
-    label: "Suspecting Yield Rate"
-    type: ratio
-    type_params:
-      numerator: captured_and_suspected_count
-      denominator: suspected_hcc_count
-
-  - name: member_risk_tier_distribution
-    description: >
-      Population breakdown across low/medium/high risk tiers - query
-      with group-by risk_tier to get the distribution. Tier cut points
-      are an illustrative repo convention, not a CMS standard. SYNTHETIC
-      RAF values - see ingestion/risk_adjustment/README.md.
-    label: "Member Risk Tier Distribution"
-    type: simple
-    type_params:
-      measure: member_count_by_tier
-
-  - name: readmission_rate
-    description: >
-      30-day all-cause readmission rate: index inpatient encounters
-      followed by another inpatient encounter for the same member within
-      30 days, over all index inpatient encounters. Real Synthea
-      encounter data (including 2 fixture encounters added to
-      demonstrate a readmission scenario) - see fact_readmission.sql for
-      the all-cause simplification note (no planned-readmission
-      exclusions).
-    label: "Readmission Rate"
-    type: ratio
-    type_params:
-      numerator: readmission_count
-      denominator: index_admission_count
-
-  - name: preventive_screening_completion_rate
-    description: >
-      Percent of eligible members completing preventive screenings
-      (BCS-E Breast Cancer Screening, COL-E Colorectal Cancer Screening -
-      real CMS Star Ratings measure codes). SYNTHETIC eval results - see
-      ingestion/clinical_quality/README.md.
-    label: "Preventive Screening Completion Rate"
-    type: ratio
-    type_params:
-      numerator: screening_completed_count
-      denominator: screening_eligible_count
-
-  - name: care_gap_count
-    description: >
-      Count of open care gaps (not-met quality measure evaluations) -
-      query with group-by member for per-member counts. SYNTHETIC eval
-      results - see ingestion/clinical_quality/README.md.
-    label: "Care Gap Count"
-    type: simple
-    type_params:
-      measure: open_care_gap_count
+- name: total_payment_leakage
+  description: Sum of billed minus allowed minus paid across claim payment transactions - the core Payment Integrity dollar metric.
+  label: Total Payment Leakage
+  type: simple
+  type_params:
+    measure: total_leakage_amount
+  meta:
+    domain: payment_integrity
+    unit: usd
+    synonyms:
+    - leakage
+    - payment leakage
+    - dollars leaked
+    - overpayment
+    data_maturity: real_data
+- name: payment_leakage_rate
+  description: Total leakage as a percent of total billed amount.
+  label: Payment Leakage Rate
+  type: ratio
+  type_params:
+    numerator: total_leakage_amount
+    denominator: total_billed_amount
+  meta:
+    domain: payment_integrity
+    unit: percent
+    synonyms:
+    - leakage rate
+    - leakage percentage
+    data_maturity: real_data
+- name: leakage_by_provider
+  description: >
+    Total Payment Leakage, intended to be grouped by the provider dimension at query time (e.g. `dbt sl query --metrics leakage_by_provider --group-by provider`) - this is the same underlying metric as total_payment_leakage, exposed under its own business name per the Metrics sheet since "Leakage by Provider" is how stakeholders ask for it.
+  label: Leakage by Provider
+  type: simple
+  type_params:
+    measure: total_leakage_amount
+  meta:
+    domain: payment_integrity
+    unit: usd
+    synonyms:
+    - provider leakage
+    - leakage per provider
+    data_maturity: real_data
+- name: denial_rate
+  description: Percent of claim adjustments that are reason-coded as denials (CO-* contractual obligation codes), out of all adjustment transactions.
+  label: Denial Rate
+  type: ratio
+  type_params:
+    numerator: denial_count
+    denominator: adjustment_count
+  meta:
+    domain: payment_integrity
+    unit: percent
+    synonyms:
+    - claim denial rate
+    - denial percentage
+    data_maturity: real_data
+- name: days_to_adjudication
+  description: Average days between service date and payment transaction date.
+  label: Days to Adjudication
+  type: simple
+  type_params:
+    measure: days_to_adjudication
+  meta:
+    domain: payment_integrity
+    unit: days
+    synonyms:
+    - adjudication turnaround
+    - claim processing time
+    data_maturity: real_data
+- name: yoy_leakage_trend
+  description: >
+    Year-over-year change in Total Payment Leakage. Computed as a derived metric offsetting total_payment_leakage by one year on the payment_date time dimension, so it can be queried directly as "this year vs last year" without a separate model.
+  label: YoY Leakage Trend
+  type: derived
+  type_params:
+    expr: current_year_leakage - prior_year_leakage
+    metrics:
+    - name: total_payment_leakage
+      alias: current_year_leakage
+    - name: total_payment_leakage
+      alias: prior_year_leakage
+      offset_window: 1 year
+  meta:
+    domain: payment_integrity
+    unit: usd
+    synonyms:
+    - leakage trend
+    - leakage year over year
+    data_maturity: real_data
+- name: raf_score
+  description: Average CMS-HCC risk adjustment factor (RAF) score per member, for the current model year.
+  label: RAF Score
+  type: simple
+  type_params:
+    measure: average_raf_score
+  meta:
+    domain: risk_adjustment
+    unit: raf_score
+    synonyms:
+    - risk score
+    - risk adjustment factor
+    - CMS-HCC score
+    data_maturity: synthetic
+- name: yoy_raf_score_trend
+  description: >
+    Year-over-year change in average RAF Score. Derived metric offsetting raf_score by one year on the effective_from time dimension, mirroring the yoy_leakage_trend pattern above.
+  label: YoY RAF Score Trend
+  type: derived
+  type_params:
+    expr: current_year_raf - prior_year_raf
+    metrics:
+    - name: raf_score
+      alias: current_year_raf
+    - name: raf_score
+      alias: prior_year_raf
+      offset_window: 1 year
+  meta:
+    domain: risk_adjustment
+    unit: raf_score
+    synonyms:
+    - risk score trend
+    - RAF trend
+    data_maturity: synthetic
+- name: hedis_style_measure_compliance_rate
+  description: Percent of eligible members meeting a given quality measure, out of all evaluations. SYNTHETIC eval results - see ingestion/clinical_quality/README.md.
+  label: HEDIS-style Measure Compliance Rate
+  type: ratio
+  type_params:
+    numerator: met_count
+    denominator: evaluation_count
+  meta:
+    domain: clinical_quality
+    unit: percent
+    synonyms:
+    - HEDIS compliance
+    - measure compliance rate
+    - quality compliance rate
+    data_maturity: synthetic
+- name: star_rating_composite_score
+  description: >
+    Weighted composite across all CMS Star Ratings measures: sum of measure_weight for measures met, divided by total possible measure_weight. Real CMS measure weighting concept; illustrative weight values and SYNTHETIC eval results - see ingestion/clinical_quality/README.md.
+  label: Star Rating Composite Score
+  type: ratio
+  type_params:
+    numerator: weighted_met_score
+    denominator: total_possible_weight
+  meta:
+    domain: clinical_quality
+    unit: score_0_to_1
+    synonyms:
+    - star rating
+    - CMS star rating
+    - composite quality score
+    data_maturity: synthetic
+- name: ed_encounters
+  description: Count of encounters specifically classed as emergency - the numerator input for ED Utilization Rate.
+  label: ED Encounters
+  type: simple
+  type_params:
+    measure: ed_encounter_count
+  meta:
+    domain: clinical_quality
+    unit: count
+    synonyms:
+    - ER visits
+    - emergency room visits
+    - emergency encounters
+    data_maturity: real_data
+    is_intermediate: true
+- name: distinct_members
+  description: Distinct members with at least one encounter - the population denominator input for ED Utilization Rate.
+  label: Distinct Members with an Encounter
+  type: simple
+  type_params:
+    measure: distinct_member_count
+  meta:
+    domain: clinical_quality
+    unit: count
+    synonyms:
+    - member population
+    - member count
+    data_maturity: real_data
+    is_intermediate: true
+- name: ed_utilization_rate
+  description: >
+    Emergency department visits per thousand members. Computed as a derived metric: (ED encounter count / distinct member count) * 1000. Real Synthea encounter data.
+  label: ED Utilization Rate
+  type: derived
+  type_params:
+    expr: (ed_visits / member_count) * 1000
+    metrics:
+    - name: ed_encounters
+      alias: ed_visits
+    - name: distinct_members
+      alias: member_count
+  meta:
+    domain: clinical_quality
+    unit: per_1000_members
+    synonyms:
+    - ER utilization
+    - emergency utilization rate
+    data_maturity: real_data
+- name: medication_adherence_pdc
+  description: >
+    Medication Adherence, measured as Proportion of Days Covered (PDC): total days covered by fills, over total possible days in the observation period. SYNTHETIC fill events; this is a simplified days-supply-sum approximation of PDC, not a full date-overlap calculation - see fact_medication_adherence.sql and ingestion/pharmacy/README.md.
+  label: Medication Adherence (PDC)
+  type: ratio
+  type_params:
+    numerator: total_days_covered
+    denominator: total_possible_days
+  meta:
+    domain: pharmacy
+    unit: percent
+    synonyms:
+    - PDC
+    - proportion of days covered
+    - medication adherence
+    data_maturity: synthetic
+- name: drg_reimbursement_variance
+  description: >
+    Variance between expected and actual DRG-based reimbursement, summed across claims. Real DRG relative weights on real DE-SynPUF claims; "expected" payment is a population-benchmark simplification, not a true CMS IPPS payment calculation - see fact_drg_reimbursement_variance.sql and ingestion/payment_integrity/README.md.
+  label: DRG Reimbursement Variance
+  type: simple
+  type_params:
+    measure: total_reimbursement_variance
+  meta:
+    domain: payment_integrity
+    unit: usd
+    synonyms:
+    - DRG variance
+    - reimbursement variance
+    - DRG payment variance
+    data_maturity: real_data
+- name: cob_tpl_recovery_amount
+  description: Total dollars recovered via coordination-of-benefits transactions. SYNTHETIC - see ingestion/payment_integrity/README.md.
+  label: COB / TPL Recovery Amount
+  type: simple
+  type_params:
+    measure: total_recovery_amount
+  meta:
+    domain: payment_integrity
+    unit: usd
+    synonyms:
+    - COB recovery
+    - TPL recovery
+    - coordination of benefits recovery
+    data_maturity: synthetic
+- name: prior_authorization_approval_rate
+  description: Percent of prior authorizations approved vs. denied. SYNTHETIC - see ingestion/payment_integrity/README.md.
+  label: Prior Authorization Approval Rate
+  type: ratio
+  type_params:
+    numerator: authorization_approved_count
+    denominator: authorization_count
+  meta:
+    domain: payment_integrity
+    unit: percent
+    synonyms:
+    - prior auth approval rate
+    - PA approval rate
+    data_maturity: synthetic
+- name: appeal_overturn_rate
+  description: Percent of appeals that overturn the original claim decision. SYNTHETIC - see ingestion/payment_integrity/README.md.
+  label: Appeal Overturn Rate
+  type: ratio
+  type_params:
+    numerator: appeal_overturned_count
+    denominator: appeal_count
+  meta:
+    domain: payment_integrity
+    unit: percent
+    synonyms:
+    - appeal success rate
+    - overturn rate
+    data_maturity: synthetic
+- name: hcc_capture_rate
+  description: >
+    Percent of expected/suspected HCC categories that are actually captured/coded for a member. SYNTHETIC suspected and captured HCC fixtures (not derived from real diagnosis data - this repo's real diagnosis codes are ICD-9-CM/SNOMED, while the CMS-HCC crosswalk is ICD-10-CM only) - see ingestion/risk_adjustment/README.md.
+  label: HCC Capture Rate
+  type: ratio
+  type_params:
+    numerator: captured_and_suspected_count
+    denominator: suspected_hcc_count
+  meta:
+    domain: risk_adjustment
+    unit: percent
+    synonyms:
+    - HCC capture
+    - condition capture rate
+    data_maturity: synthetic
+- name: coding_gap_closure_rate
+  description: Percent of identified coding gaps subsequently closed. SYNTHETIC - see ingestion/risk_adjustment/README.md.
+  label: Coding Gap Closure Rate
+  type: ratio
+  type_params:
+    numerator: coding_gap_closed_count
+    denominator: coding_gap_identified_count
+  meta:
+    domain: risk_adjustment
+    unit: percent
+    synonyms:
+    - coding gap closure
+    - gap closure rate
+    data_maturity: synthetic
+- name: risk_score_accuracy
+  description: >
+    Comparison of a member's actual (coded) RAF score against a clinically-suspected RAF approximation, expressed as actual over suspected. A ratio near 1.0 suggests coding and clinical suspicion are aligned; well under 1.0 suggests under-coding. SYNTHETIC, and a simplified HCC-weight-sum approximation, not a true CMS-HCC calculation - see fact_risk_score_accuracy.sql.
+  label: Risk Score Accuracy
+  type: ratio
+  type_params:
+    numerator: total_actual_raf
+    denominator: total_suspected_raf_approx
+  meta:
+    domain: risk_adjustment
+    unit: ratio
+    synonyms:
+    - RAF accuracy
+    - risk score accuracy ratio
+    data_maturity: synthetic
+- name: suspecting_yield_rate
+  description: >
+    Percent of suspected conditions confirmed through coding - the same underlying comparison as HCC Capture Rate, exposed under its own metric name to match how a Risk Adjustment stakeholder asks for it ("of what we suspected, how much did we confirm"). SYNTHETIC - see ingestion/risk_adjustment/README.md.
+  label: Suspecting Yield Rate
+  type: ratio
+  type_params:
+    numerator: captured_and_suspected_count
+    denominator: suspected_hcc_count
+  meta:
+    domain: risk_adjustment
+    unit: percent
+    synonyms:
+    - suspecting yield
+    - condition suspecting rate
+    data_maturity: synthetic
+- name: member_risk_tier_distribution
+  description: >
+    Population breakdown across low/medium/high risk tiers - query with group-by risk_tier to get the distribution. Tier cut points are an illustrative repo convention, not a CMS standard. SYNTHETIC RAF values - see ingestion/risk_adjustment/README.md.
+  label: Member Risk Tier Distribution
+  type: simple
+  type_params:
+    measure: member_count_by_tier
+  meta:
+    domain: risk_adjustment
+    unit: count
+    synonyms:
+    - risk tier breakdown
+    - risk stratification
+    data_maturity: synthetic
+- name: readmission_rate
+  description: >
+    30-day all-cause readmission rate: index inpatient encounters followed by another inpatient encounter for the same member within 30 days, over all index inpatient encounters. Real Synthea encounter data (including 2 fixture encounters added to demonstrate a readmission scenario) - see fact_readmission.sql for the all-cause simplification note (no planned-readmission exclusions).
+  label: Readmission Rate
+  type: ratio
+  type_params:
+    numerator: readmission_count
+    denominator: index_admission_count
+  meta:
+    domain: clinical_quality
+    unit: percent
+    synonyms:
+    - 30-day readmission rate
+    - hospital readmission rate
+    data_maturity: real_data
+- name: preventive_screening_completion_rate
+  description: >
+    Percent of eligible members completing preventive screenings (BCS-E Breast Cancer Screening, COL-E Colorectal Cancer Screening - real CMS Star Ratings measure codes). SYNTHETIC eval results - see ingestion/clinical_quality/README.md.
+  label: Preventive Screening Completion Rate
+  type: ratio
+  type_params:
+    numerator: screening_completed_count
+    denominator: screening_eligible_count
+  meta:
+    domain: clinical_quality
+    unit: percent
+    synonyms:
+    - screening completion rate
+    - preventive care completion
+    data_maturity: synthetic
+- name: care_gap_count
+  description: >
+    Count of open care gaps (not-met quality measure evaluations) - query with group-by member for per-member counts. SYNTHETIC eval results - see ingestion/clinical_quality/README.md.
+  label: Care Gap Count
+  type: simple
+  type_params:
+    measure: open_care_gap_count
+  meta:
+    domain: clinical_quality
+    unit: count
+    synonyms:
+    - open care gaps
+    - care gaps
+    data_maturity: synthetic
